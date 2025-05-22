@@ -7,7 +7,7 @@ song_artist = input("Please enter the artist of the song you are looking for: ")
 search_query = f"ytsearch:{song_artist} {song_name}"
 
 command = [
-    "yt-dlp",
+    "/app/music_auto_downloader/yt-dlp",
     "-x",
     "--audio-format", "mp3",
     "--embed-thumbnail",

@@ -15,7 +15,6 @@ while True:
         "/app/music_auto_downloader/yt-dlp",
         "-x",
         "--audio-format", "mp3",
-        "--embed-thumbnail",
         "--add-metadata",
         "-o", "/app/music_auto_downloader/downloads/%(title)s.%(ext)s",
         search_query

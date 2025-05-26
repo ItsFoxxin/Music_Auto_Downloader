@@ -1,0 +1,13 @@
+version: '3.9'
+
+services:
+  music_auto_downloader:
+    build: .
+    image: foxxin/music_auto_downloader
+    container_name: music_auto_downloader
+    volumes:
+      - ./music:/app/music_auto_downloader/downloads
+    stdin_open: true
+    tty: true
+    restart: always
+    

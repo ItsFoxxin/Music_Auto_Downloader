@@ -7,6 +7,8 @@ services:
     container_name: music_auto_downloader_backend
     volumes:
       - ./music:/app/music_auto_downloader_backend/downloads
+    networks:
+      - music_auto_downloader
     ports:
       - "5001:5001"
     stdin_open: true
@@ -17,8 +19,15 @@ services:
     build: frontend/
     image: foxxin/music_auto_downloader_frontend
     container_name: music_auto_downloader_frontend
+    networks:
+      - music_auto_downloader
     ports:
       - "5000:5000"
     stdin_open: true
     tty: true
     restart: always
+
+  networks:
+  music_auto_downloader:
+    name: music_auto_downloader
+    

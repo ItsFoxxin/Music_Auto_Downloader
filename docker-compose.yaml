@@ -27,7 +27,7 @@ services:
     tty: true
     restart: always
 
-  networks:
+networks:
   music_auto_downloader:
-    name: music_auto_downloader
+    driver: bridge
     

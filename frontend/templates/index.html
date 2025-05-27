@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+
+<html lang="en-us">
+
+    <head>
+        <meta charset="UTF-8">
+        <title>Music Auto Downloader</title>
+    </head>
+
+    <body>
+        <h1>Music Auto Downloader</h1>
+        <form method="post">
+            <label for="song_name">Song Name:</label><br>
+            <input type="text" id="song_name" name="song_name" placeholder="Enter the name of the song"><br>
+            <label for="song_artist">Artist Name:</label><br>
+            <input type="text" id="song_artist" name="song_artist" placeholder="Enter the name of the artist"><br>
+            <input type="submit" value="Download">
+        </form>
+
+        {% if success_message %}
+            <p>{{ success_message }}</p>
+        {% endif %}
+
+        {% if error_message %}
+            <p>{{ error_message }}</p>
+        {% endif %}
+    </body>
+</html>

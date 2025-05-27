@@ -1,0 +1,24 @@
+version: '3.9'
+
+services:
+  music_auto_downloader_backend:
+    build: backend/
+    image: foxxin/music_auto_downloader_backend
+    container_name: music_auto_downloader_backend
+    volumes:
+      - ./music:/app/music_auto_downloader_backend/downloads
+    ports:
+      - "5001:5001"
+    stdin_open: true
+    tty: true
+    restart: always
+
+  music_auto_downloader_frontend:
+    build: frontend/
+    image: foxxin/music_auto_downloader_frontend
+    container_name: music_auto_downloader_frontend
+    ports:
+      - "5000:5000"
+    stdin_open: true
+    tty: true
+    restart: always

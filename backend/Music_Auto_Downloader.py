@@ -13,10 +13,18 @@ def handler():
     print(f"Incoming request: {song_name} by {song_artist}")
     
     #build search query for song and use it to send command to system
-    search_query = f"ytsearch:{song_artist} {song_name}"
+    #command grabs top 5 results, less then 5 mins, perfer topic channels or official audios as well as highest audio quality
+    search_query = f"ytsearch5:{song_artist} {song_name} audio"
     
     command = [
         "/app/music_auto_downloader_backend/yt-dlp",
+        "--no-playlist",
+        "--audio-quality", "0"
+        "--extract-audio",
+        "--prefer-free-formats",
+        "--no-warnings",
+        "--match-filter", "duration < 600",
+        "--match-title", "(?i).*official audio|topic|lyric|lyrics|official lyrics|lyric video.*",
         "-x",
         "--audio-format", "mp3",
         "-o", "/app/music_auto_downloader_backend/downloads/%(title)s.%(ext)s",

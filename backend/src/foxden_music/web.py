@@ -1139,7 +1139,7 @@ def create_app(settings: Settings | None = None, database: Database | None = Non
         acquisition_id: str,
         csrf_token: str = Form(...),
         session: Session = Depends(session_dependency),
-    ) -> RedirectResponse:
+    ) -> HTMLResponse:
         request.app.state.csrf.verify(csrf_token)
         acquisition = load_acquisition(session, acquisition_id)
         if not settings.download_inbox_auto_import or settings.download_inbox_dir is None:
@@ -1169,16 +1169,21 @@ def create_app(settings: Settings | None = None, database: Database | None = Non
                 session,
                 acquisition,
                 AcquisitionState.WAITING_FOR_DOWNLOAD,
-                "Server browser opened; watching the download inbox",
+                "Server browser handoff started; watching the download inbox",
             )
-        # Keep the form response on this origin. The application's CSP correctly
-        # restricts form submissions to ``'self'`` and Firefox applies that
-        # restriction to redirects as well. Client-side code performs the
-        # separate top-level navigation to the configured server browser only
-        # after this state transition succeeds.
-        return RedirectResponse(
-            url=f"/acquisitions/{acquisition.id}?download=started",
-            status_code=status.HTTP_303_SEE_OTHER,
+        destination = settings.remote_browser_url or settings.spotidownloader_url
+        # Return an actual same-origin document before navigating away. This
+        # works even when a client has an older cached app.js and avoids Firefox
+        # treating an external redirect as a blocked cross-origin form action.
+        return templates.TemplateResponse(
+            request=request,
+            name="acquisitions/browser_handoff.html",
+            headers={"Cache-Control": "no-store"},
+            context=common_context(
+                request,
+                acquisition=acquisition,
+                browser_url=destination,
+            ),
         )
 
     @app.post("/acquisitions/{acquisition_id}/upload")

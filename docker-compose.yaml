@@ -46,7 +46,7 @@ x-environment: &foxden-environment
   REMOTE_BROWSER_URL: "${REMOTE_BROWSER_URL:-}"
 
 x-service: &foxden-service
-  image: fox-den-music:2.3.1
+  image: fox-den-music:2.3.2
   build: *foxden-build
   user: "${PUID:-10001}:${PGID:-10001}"
   init: true

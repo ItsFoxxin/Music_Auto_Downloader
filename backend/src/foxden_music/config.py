@@ -128,7 +128,7 @@ class Settings(BaseSettings):
     def musicbrainz_user_agent(self) -> str | None:
         if not self.musicbrainz_contact:
             return None
-        return f"FoxDenMusic/2.3.1 ({self.musicbrainz_contact})"
+        return f"FoxDenMusic/2.3.2 ({self.musicbrainz_contact})"
 
     @property
     def jellyfin_configured(self) -> bool:

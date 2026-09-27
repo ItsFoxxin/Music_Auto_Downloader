@@ -232,10 +232,11 @@ def test_acquisition_detail_starts_watched_server_download(
             follow_redirects=False,
         )
 
-        assert started.status_code == 303
-        assert started.headers["location"] == (
-            f"/acquisitions/{acquisition_id}?download=started"
-        )
+        assert started.status_code == 200
+        assert started.headers["cache-control"] == "no-store"
+        assert 'http-equiv="refresh"' in started.text
+        assert 'content="0;url=http://10.0.30.20:5800"' in started.text
+        assert 'href="http://10.0.30.20:5800"' in started.text
     with database.session() as session:
         acquisition = session.get(AcquisitionJob, acquisition_id)
         assert acquisition is not None

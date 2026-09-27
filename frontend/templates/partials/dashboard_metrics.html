@@ -1,0 +1,53 @@
+<section class="metric-section" aria-labelledby="library-metrics-heading">
+  <div class="section-label"><h2 id="library-metrics-heading">Library</h2>{% if latest_scan %}<span>Last scan {{ latest_scan.finished_at|datetime if latest_scan.finished_at else latest_scan.state|replace('_', ' ') }}</span>{% else %}<span>Not scanned yet</span>{% endif %}</div>
+  <div class="stat-grid stat-grid-four">
+    <a class="stat-card green" href="/library"><span>Tracks</span><strong>{{ library_metrics.tracks }}</strong></a>
+    <a class="stat-card" href="/library/albums"><span>Albums</span><strong>{{ library_metrics.albums }}</strong></a>
+    <a class="stat-card" href="/library/artists"><span>Artists</span><strong>{{ library_metrics.artists }}</strong></a>
+    <div class="stat-card"><span>Library size</span><strong class="metric-text">{{ library_metrics.bytes|filesize }}</strong></div>
+  </div>
+</section>
+
+<div class="dashboard-columns compact-columns">
+  <section class="metric-section" aria-labelledby="quality-metrics-heading">
+    <div class="section-label"><h2 id="quality-metrics-heading">Quality</h2></div>
+    <div class="mini-metrics">
+      <span><strong>{{ quality_metrics.flac }}</strong> FLAC</span>
+      <span><strong>{{ quality_metrics.mp3_320 }}</strong> MP3 320</span>
+      <span><strong>{{ quality_metrics.mp3_below_320 }}</strong> MP3 below 320</span>
+      <span><strong>{{ quality_metrics.aac_m4a }}</strong> AAC / M4A</span>
+      <span><strong>{{ quality_metrics.opus_ogg }}</strong> Opus / OGG</span>
+      <span><strong>{{ quality_metrics.unknown }}</strong> Unknown</span>
+    </div>
+  </section>
+  <section class="metric-section" aria-labelledby="activity-metrics-heading">
+    <div class="section-label"><h2 id="activity-metrics-heading">Activity</h2></div>
+    <div class="mini-metrics">
+      <span><strong>{{ activity_metrics.queued }}</strong> Queued</span>
+      <span><strong>{{ activity_metrics.waiting_for_user }}</strong> Waiting</span>
+      <span><strong>{{ activity_metrics.processing }}</strong> Processing</span>
+      <a href="/review"><strong>{{ activity_metrics.needs_review }}</strong> Review</a>
+      <span><strong>{{ activity_metrics.failed }}</strong> Failed</span>
+    </div>
+  </section>
+</div>
+
+<div class="dashboard-columns compact-columns">
+  <section class="metric-section" aria-labelledby="storage-metrics-heading">
+    <div class="section-label"><h2 id="storage-metrics-heading">Storage</h2>{% if storage_metrics.observed_at %}<span>Updated recently</span>{% endif %}</div>
+    <div class="mini-metrics">
+      <span><strong>{{ storage_metrics.music_bytes|filesize }}</strong> Music</span>
+      <span><strong>{{ storage_metrics.staging_bytes|filesize }}</strong> Staging</span>
+      <span><strong>{{ storage_metrics.free_bytes|filesize }}</strong> Free</span>
+    </div>
+  </section>
+  <section class="metric-section" aria-labelledby="health-metrics-heading">
+    <div class="section-label"><h2 id="health-metrics-heading">Health</h2><a href="/library/health">Open health view</a></div>
+    <div class="mini-metrics">
+      <span><strong>{{ health_metrics.missing_artwork }}</strong> Missing artwork</span>
+      <span><strong>{{ health_metrics.missing_metadata }}</strong> Metadata</span>
+      <span><strong>{{ health_metrics.duplicate_hash_groups }}</strong> Duplicate groups</span>
+      <span><strong>{{ health_metrics.low_quality }}</strong> Low bitrate</span>
+    </div>
+  </section>
+</div>

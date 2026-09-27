@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}Add music · {{ app_name }}{% endblock %}
+{% block content %}
+<section class="page-heading">
+  <p class="eyebrow">Acquisition and import</p>
+  <h1>Add music</h1>
+  <p>Queue Spotify links for a guided manual download, or send a file directly into the proven Stage 1 importer.</p>
+</section>
+
+<div class="add-grid">
+  <form class="panel form-stack" action="/acquisitions" method="post">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <div><p class="eyebrow">Acquisition queue</p><h2>Queue Spotify links</h2><p class="muted">Paste one track, album, or playlist URL per line. Fox Den Music stores the request but does not contact Spotify.</p></div>
+    {% if form_error %}<div class="form-error" role="alert"><strong>Nothing was queued.</strong><span>{{ form_error }}</span></div>{% endif %}
+    <label for="source-urls"><strong>Spotify URLs</strong><span>Only https://open.spotify.com track, album, and playlist links are accepted.</span></label>
+    <textarea id="source-urls" name="source_urls" rows="9" required spellcheck="false" placeholder="https://open.spotify.com/album/...&#10;https://open.spotify.com/track/...">{{ source_urls }}</textarea>
+    <label for="preferred-format"><strong>Preferred format</strong><span>The downloader’s available formats may vary.</span></label>
+    <select id="preferred-format" name="preferred_format">
+      <option value="FLAC"{% if preferred_format == 'FLAC' %} selected{% endif %}>FLAC</option>
+      <option value="MP3_320"{% if preferred_format == 'MP3_320' %} selected{% endif %}>MP3 320</option>
+    </select>
+    <button class="button primary" type="submit">Add all to queue</button>
+  </form>
+
+  <form class="panel upload-form form-stack" action="/imports" method="post" enctype="multipart/form-data" data-upload-form data-max-upload-bytes="{{ max_upload_bytes }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <div><p class="eyebrow">Direct import</p><h2>Already have the download?</h2><p class="muted">Upload a ZIP or supported audio file without creating an acquisition request.</p></div>
+    <label class="drop-zone">
+      <span class="upload-icon" aria-hidden="true">↑</span>
+      <strong>Choose an album ZIP or one audio file</strong>
+      <span>ZIP for a full album · individual audio files are treated as one-track releases · maximum {{ max_upload_bytes|filesize }}</span>
+      <input type="file" name="album" accept=".zip,.flac,.mp3,.m4a,.aac,.opus,.ogg,.oga" required data-upload-file>
+    </label>
+    <p class="upload-selection" data-upload-selection aria-live="polite">No file selected.</p>
+    <div class="upload-progress" data-upload-progress-wrap hidden>
+      <progress data-upload-progress max="100" value="0">0%</progress>
+      <span data-upload-status role="status" aria-live="polite"></span>
+    </div>
+    <div class="notice"><strong>Same safe pipeline:</strong> direct and acquisition uploads receive the same archive and audio validation.</div>
+    <button class="button" type="submit" data-upload-submit>Queue direct import</button>
+  </form>
+</div>
+{% endblock %}

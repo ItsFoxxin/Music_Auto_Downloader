@@ -1,0 +1,13 @@
+<span data-poll-terminal="{{ 'true' if poll_terminal else 'false' }}" hidden></span>
+{% set cancelled = effective_state == 'CANCELLED' %}
+<ol class="trace-list">
+  <li class="trace-stage complete"><span aria-hidden="true">1</span><div><strong>Acquisition queued</strong><small>{{ acquisition.created_at|datetime }}</small></div></li>
+  <li class="trace-stage {{ 'complete' if acquisition.file_received_at else ('current' if not cancelled else '') }}"><span aria-hidden="true">2</span><div><strong>{% if acquisition.file_received_at %}File received{% elif cancelled %}Request cancelled{% else %}Waiting for manual download{% endif %}</strong><small>{% if acquisition.file_received_at %}{{ acquisition.file_received_at|datetime }}{% elif cancelled %}{{ acquisition.finished_at|datetime }} · no file was handed to the importer{% else %}Use the controls above, then upload the result.{% endif %}</small></div></li>
+  <li class="trace-stage {{ 'complete' if acquisition.import_job and acquisition.import_job.state == 'COMPLETE' else ('current' if acquisition.import_job else '') }}"><span aria-hidden="true">3</span><div><strong>Stage 1 import</strong><small>{% if acquisition.import_job %}{{ acquisition.import_job.state|replace('_', ' ') }} · {{ acquisition.import_job.track_count }} tracks{% elif cancelled %}Not started · request was cancelled before handoff{% else %}Waiting for a file{% endif %}</small></div></li>
+  <li class="trace-stage {{ 'complete' if acquisition.import_job and acquisition.import_job.state == 'COMPLETE' else '' }}"><span aria-hidden="true">4</span><div><strong>Library and Jellyfin</strong><small>{% if acquisition.import_job and acquisition.import_job.state == 'COMPLETE' %}Atomic import complete · Jellyfin {{ acquisition.import_job.jellyfin_state|replace('_', ' ') }}{% elif cancelled %}No library change · request cancelled before import{% else %}Waiting for import{% endif %}</small></div></li>
+</ol>
+{% if timeline_events %}
+<details class="event-details"><summary>Full event timeline</summary><ol class="timeline">
+  {% for event in timeline_events %}<li class="event-{{ event.level|lower }}"><span class="timeline-dot"></span><div><strong>{{ event.message }}</strong><span>{{ event.created_at|datetime }} · {{ event.domain }} {{ event.state|replace('_', ' ') }}</span></div></li>{% endfor %}
+</ol></details>
+{% endif %}

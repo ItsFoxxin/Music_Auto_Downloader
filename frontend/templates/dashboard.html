@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}Dashboard · {{ app_name }}{% endblock %}
+{% block content %}
+<section class="hero compact">
+  <div>
+    <p class="eyebrow">The den at a glance</p>
+    <h1>Your music library, live.</h1>
+    <p>Queue acquisitions, follow imports, and spot library issues without leaving the dashboard.</p>
+  </div>
+  <div class="mini-metrics">
+    <form action="/library/scans" method="post"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button class="button" type="submit">Refresh library</button></form>
+    <a class="button primary" href="/add">Add music</a>
+  </div>
+</section>
+
+<div data-poll-url="/partials/dashboard/metrics" data-poll-ms="30000">
+  {% include "partials/dashboard_metrics.html" %}
+</div>
+
+<div class="dashboard-columns">
+  <section class="panel" aria-labelledby="active-heading">
+    <div class="panel-heading">
+      <div><p class="eyebrow">In motion</p><h2 id="active-heading">Active jobs</h2></div>
+      <a href="/acquisitions">View queue</a>
+    </div>
+    <div data-poll-url="/partials/dashboard/active" data-poll-ms="8000" aria-live="polite" aria-atomic="true">
+      {% include "partials/dashboard_active.html" %}
+    </div>
+  </section>
+
+  <section class="panel" aria-labelledby="recent-heading">
+    <div class="panel-heading">
+      <div><p class="eyebrow">Published</p><h2 id="recent-heading">Recent imports</h2></div>
+      <a href="/history">View history</a>
+    </div>
+    <div data-poll-url="/partials/dashboard/recent" data-poll-ms="30000">
+      {% include "partials/dashboard_recent.html" %}
+    </div>
+  </section>
+</div>
+{% endblock %}

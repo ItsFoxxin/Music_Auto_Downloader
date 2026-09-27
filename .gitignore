@@ -1,9 +1,42 @@
-music/
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
-*.swp
-*.swo
-.DS_Store
+# Local configuration and secrets
 .env
+.env.*
+!.env.example
+secrets/
+
+# Runtime data and user-supplied media
+data/
+*.db
+*.db-*
+*.sqlite
+*.sqlite3
+*.zip
+*.flac
+*.mp3
+*.m4a
+*.aac
+*.ogg
+*.opus
+
+# Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+
+# Tests and tooling
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# Editors and operating systems
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db

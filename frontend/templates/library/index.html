@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Library · {{ app_name }}{% endblock %}
+{% block content %}
+<section class="page-heading split">
+  <div><p class="eyebrow">Read-only inventory</p><h1>Library</h1><p>Files actually observed in the managed music library, including music that predates Fox Den Music.</p></div>
+  <form action="/library/scans" method="post"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button class="button primary" type="submit">Refresh library</button></form>
+</section>
+
+{% if selected_scan %}<section class="panel scan-panel" aria-labelledby="scan-heading"><h2 id="scan-heading">Library scan</h2><div data-poll-url="/library/scans/{{ selected_scan.id }}/status" data-poll-ms="6000" aria-live="polite" aria-atomic="true">{% set scan_run = selected_scan %}{% set poll_terminal = selected_scan.state in ['COMPLETE', 'FAILED'] %}{% include "partials/library_scan_status.html" %}</div></section>{% endif %}
+
+<section class="stat-grid stat-grid-four" aria-label="Library summary">
+  <div class="stat-card green"><span>Tracks</span><strong>{{ library_metrics.tracks }}</strong></div>
+  <a class="stat-card" href="/library/albums"><span>Albums</span><strong>{{ library_metrics.albums }}</strong></a>
+  <a class="stat-card" href="/library/artists"><span>Artists</span><strong>{{ library_metrics.artists }}</strong></a>
+  <div class="stat-card"><span>Total size</span><strong class="metric-text">{{ library_metrics.bytes|filesize }}</strong></div>
+</section>
+
+<div class="dashboard-columns">
+  <section class="panel"><div class="panel-heading"><div><p class="eyebrow">Formats</p><h2>Quality mix</h2></div></div><div class="quality-bars"><span><strong>{{ quality_metrics.flac }}</strong> FLAC</span><span><strong>{{ quality_metrics.mp3_320 }}</strong> MP3 320</span><span><strong>{{ quality_metrics.mp3_below_320 }}</strong> MP3 below 320</span><span><strong>{{ quality_metrics.aac_m4a }}</strong> AAC / M4A</span><span><strong>{{ quality_metrics.opus_ogg }}</strong> Opus / OGG</span><span><strong>{{ quality_metrics.unknown }}</strong> Unknown</span></div></section>
+  <section class="panel"><div class="panel-heading"><div><p class="eyebrow">Maintenance</p><h2>Library health</h2></div><a href="/library/health">View details</a></div><div class="quality-bars"><span><strong>{{ health_metrics.missing_artwork }}</strong> missing artwork</span><span><strong>{{ health_metrics.missing_metadata }}</strong> metadata issues</span><span><strong>{{ health_metrics.duplicate_hash_groups }}</strong> duplicate hash groups</span><span><strong>{{ health_metrics.low_quality_files }}</strong> lower bitrate MP3</span></div></section>
+</div>
+
+<section class="panel"><div class="panel-heading"><div><p class="eyebrow">Browse</p><h2>Explore the den</h2></div></div><div class="browse-actions"><a class="browse-card" href="/library/artists"><strong>Artists</strong><span>Collections grouped by canonical artist</span></a><a class="browse-card" href="/library/albums"><strong>Albums</strong><span>Artwork, metadata, format, and tracks</span></a><a class="browse-card" href="/library/health"><strong>Health</strong><span>Missing data, possible duplicates, and inspection failures</span></a></div></section>
+
+{% if latest_scan %}<p class="freshness">Latest scan: <span class="status status-{{ latest_scan.state|lower }}">{{ latest_scan.state|replace('_', ' ') }}</span> · {{ latest_scan.files_inspected }} inspected · {{ latest_scan.files_reused }} unchanged</p>{% else %}<p class="freshness">No inventory scan has completed yet. Request a read-only scan to populate this view.</p>{% endif %}
+{% endblock %}

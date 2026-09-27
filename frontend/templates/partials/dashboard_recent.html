@@ -1,0 +1,12 @@
+{% if recent_imports %}
+<div class="job-list">
+  {% for item in recent_imports %}
+  <a class="job-row" href="/jobs/{{ item.id }}">
+    <div><strong>{{ item.title }}</strong><span>{{ item.artist or 'Artist unavailable' }} · {{ item.track_count }} tracks · {{ item.format_summary }} · {{ item.finished_at|datetime }}</span></div>
+    <span class="status status-{{ item.jellyfin_state|lower }}">Jellyfin {{ item.jellyfin_state|replace('_', ' ') }}</span>
+  </a>
+  {% endfor %}
+</div>
+{% else %}
+<div class="empty compact-empty"><p>No completed imports yet.</p></div>
+{% endif %}

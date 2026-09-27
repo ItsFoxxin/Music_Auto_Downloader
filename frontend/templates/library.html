@@ -1,0 +1,8 @@
+{% extends "base.html" %}
+{% block title %}Library · {{ app_name }}{% endblock %}
+{% block content %}
+<section class="page-heading"><p class="eyebrow">Managed inventory</p><h1>Library</h1><p>Tracks imported by Fox Den Music. A broader library-health scan is planned for a later milestone.</p></section>
+<section class="stat-grid"><div class="stat-card green"><span>Managed tracks</span><strong>{{ track_count }}</strong></div>{% for codec, count in codec_counts.items() %}<div class="stat-card"><span>{{ codec|upper }}</span><strong>{{ count }}</strong></div>{% endfor %}</section>
+<section class="panel"><h2>Milestone 1 scope</h2><p>This inventory records imports made through Fox Den Music. It does not yet crawl or modify music that already existed in the Jellyfin library.</p></section>
+{% endblock %}
+

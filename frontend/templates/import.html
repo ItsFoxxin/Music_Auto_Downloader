@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Add music · {{ app_name }}{% endblock %}
+{% block content %}
+<section class="page-heading"><p class="eyebrow">New import</p><h1>Add music</h1><p>Upload an album ZIP or a supported individual audio file. The source is kept outside the live library.</p></section>
+<form class="panel upload-form form-stack" action="/imports" method="post" enctype="multipart/form-data" data-upload-form data-max-upload-bytes="{{ max_upload_bytes }}">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+  <label class="drop-zone">
+    <span class="upload-icon" aria-hidden="true">↑</span>
+    <strong>Choose an album ZIP or one audio file</strong>
+    <span>ZIP for a full album · individual audio files are treated as one-track releases · maximum {{ max_upload_bytes|filesize }}</span>
+    <input type="file" name="album" accept=".zip,.flac,.mp3,.m4a,.aac,.opus,.ogg,.oga" required data-upload-file>
+  </label>
+  <p class="upload-selection" data-upload-selection aria-live="polite">No file selected.</p>
+  <div class="upload-progress" data-upload-progress-wrap hidden>
+    <progress data-upload-progress max="100" value="0">0%</progress>
+    <span data-upload-status role="status" aria-live="polite"></span>
+  </div>
+  <div class="notice"><strong>Safe staging:</strong> archives are validated before extraction and never write directly to your music library.</div>
+  <button class="button primary" type="submit" data-upload-submit>Queue import</button>
+</form>
+{% endblock %}
+

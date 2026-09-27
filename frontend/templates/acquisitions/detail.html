@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}{{ acquisition.display_title }} · {{ app_name }}{% endblock %}
+{% block content %}
+<section class="page-heading split">
+  <div><p class="eyebrow">{{ acquisition.source_type|title }} acquisition</p><h1>{{ acquisition.display_title }}</h1><p class="mono">{{ acquisition.id }}</p></div>
+  <span class="status large status-{{ effective_state|lower }}" role="status">{{ effective_state|replace('_', ' ') }}</span>
+</section>
+
+<div class="detail-grid acquisition-layout">
+  <div>
+    <section class="panel provider-panel" aria-labelledby="provider-heading">
+      <p class="eyebrow">Human-assisted download</p><h2 id="provider-heading">Get the requested file</h2>
+      <ol class="instruction-list"><li>Copy the validated Spotify URL.</li><li>Open SpotiDownloader and complete its prompts or CAPTCHA yourself.</li><li>Download the ZIP or audio file, then upload it below.</li></ol>
+      <label for="source-url"><strong>Spotify URL</strong></label>
+      <div class="copy-row"><input id="source-url" type="text" value="{{ acquisition.source_url }}" readonly><button class="button" type="button" data-copy-target="source-url">Copy URL</button></div>
+      <p class="copy-feedback" data-copy-feedback role="status" aria-live="polite"></p>
+      <a class="button primary" href="{{ provider_url }}" target="_blank" rel="noopener noreferrer external">Open SpotiDownloader</a>
+    </section>
+
+    <section class="panel" aria-labelledby="trace-heading">
+      <div class="panel-heading"><div><p class="eyebrow">Unified trace</p><h2 id="trace-heading">Acquisition to library</h2></div></div>
+      <div data-poll-url="/acquisitions/{{ acquisition.id }}/status" data-poll-ms="5000" aria-live="polite" aria-atomic="true">
+        {% set poll_terminal = effective_state in ['COMPLETE', 'FAILED', 'CANCELLED', 'NEEDS_REVIEW'] %}
+        {% include "partials/acquisition_status.html" %}
+      </div>
+    </section>
+  </div>
+
+  <aside class="stack">
+    <section class="panel key-values">
+      <h2>Request details</h2>
+      <dl>
+        <div><dt>Provider</dt><dd>SpotiDownloader (manual)</dd></div>
+        <div><dt>Source</dt><dd>{{ acquisition.source_type|title }}</dd></div>
+        <div><dt>Format</dt><dd>{{ acquisition.preferred_format|replace('_', ' ') }}</dd></div>
+        <div><dt>Created</dt><dd>{{ acquisition.created_at|datetime }}</dd></div>
+        <div><dt>File</dt><dd>{{ acquisition.artifacts[0].display_filename if acquisition.artifacts else 'Waiting' }}</dd></div>
+      </dl>
+    </section>
+    {% if not acquisition.associated_import_job_id and acquisition.state in ['QUEUED', 'WAITING_FOR_USER', 'WAITING_FOR_DOWNLOAD'] %}
+    <form class="panel form-stack" action="/acquisitions/{{ acquisition.id }}/upload" method="post" enctype="multipart/form-data" data-upload-form data-max-upload-bytes="{{ max_upload_bytes }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <div><p class="eyebrow">Handoff</p><h2>Upload download</h2><p class="muted">For an album, choose the downloaded ZIP. A loose audio file is treated as a one-track release.</p></div>
+      <label for="acquisition-file"><strong>Album ZIP or one audio file</strong><span>Maximum {{ max_upload_bytes|filesize }}</span></label>
+      <input id="acquisition-file" type="file" name="album" accept=".zip,.flac,.mp3,.m4a,.aac,.opus,.ogg,.oga" required data-upload-file>
+      <p class="upload-selection" data-upload-selection aria-live="polite">No file selected.</p>
+      <div class="upload-progress" data-upload-progress-wrap hidden>
+        <progress data-upload-progress max="100" value="0">0%</progress>
+        <span data-upload-status role="status" aria-live="polite"></span>
+      </div>
+      <button class="button primary" type="submit" data-upload-submit>Upload and start import</button>
+    </form>
+    <form class="panel form-stack danger-panel" action="/acquisitions/{{ acquisition.id }}/cancel" method="post">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <div><p class="eyebrow">Waiting request</p><h2>Cancel this request</h2><p class="muted">This removes it from the active queue. It does not delete anything downloaded in your browser or touch media files.</p></div>
+      <button class="button" type="submit">Cancel request</button>
+    </form>
+    {% elif acquisition.state == 'CANCELLED' and not acquisition.associated_import_job_id %}
+    <section class="panel danger-panel"><p class="eyebrow">Cancelled</p><h2>Import was not started</h2><p class="muted">The request is preserved in history. No staging or music files were removed.</p></section>
+    {% elif acquisition.import_job %}
+    <section class="panel"><p class="eyebrow">Linked import</p><h2>Stage 1 is in control</h2><p>{{ acquisition.import_job.track_count }} track{{ '' if acquisition.import_job.track_count == 1 else 's' }} inspected so far.</p><a class="button" href="/jobs/{{ acquisition.import_job.id }}">Open import details</a></section>
+    {% endif %}
+  </aside>
+</div>
+{% endblock %}

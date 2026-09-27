@@ -1,0 +1,8 @@
+{% extends "base.html" %}
+{% block title %}Artists · {{ app_name }}{% endblock %}
+{% block content %}
+<section class="page-heading"><p class="eyebrow">Library</p><h1>Artists</h1><p>{{ total }} indexed artist{{ '' if total == 1 else 's' }}.</p></section>
+<form class="filter-bar" method="get" action="/library/artists"><label for="artist-search">Search artists</label><input id="artist-search" type="search" name="q" value="{{ q }}"><button class="button" type="submit">Search</button></form>
+<section class="panel table-panel"><div class="table-wrap"><table><caption class="sr-only">Indexed artists</caption><thead><tr><th scope="col">Artist</th><th scope="col">Albums</th><th scope="col">Tracks</th><th scope="col">FLAC</th><th scope="col">Size</th></tr></thead><tbody>{% for artist in artists %}<tr><td><a href="/library/artists/{{ artist.id }}"><strong>{{ artist.canonical_name }}</strong></a></td><td>{{ artist.album_count }}</td><td>{{ artist.track_count }}</td><td>{{ '%.0f'|format((artist.flac_track_count / artist.track_count * 100) if artist.track_count else 0) }}%</td><td>{{ artist.total_bytes|filesize }}</td></tr>{% else %}<tr><td colspan="5">No artists match this search.</td></tr>{% endfor %}</tbody></table></div></section>
+{% if total > page_size %}<nav class="pagination" aria-label="Artist pages">{% if page > 1 %}<a class="button" href="?page={{ page - 1 }}&amp;q={{ q }}">Previous</a>{% endif %}<span>Page {{ page }}</span>{% if page * page_size < total %}<a class="button" href="?page={{ page + 1 }}&amp;q={{ q }}">Next</a>{% endif %}</nav>{% endif %}
+{% endblock %}

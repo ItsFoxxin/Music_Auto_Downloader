@@ -1,0 +1,12 @@
+{% if active_items %}
+<div class="job-list">
+  {% for item in active_items %}
+  <a class="job-row" href="{{ item.url }}">
+    <div><strong>{{ item.title }}</strong><span>{{ item.kind|title }} · updated {{ item.updated_at|datetime }}</span></div>
+    <span class="status status-{{ item.state|lower }}">{{ item.state|replace('_', ' ') }}</span>
+  </a>
+  {% endfor %}
+</div>
+{% else %}
+<div class="empty compact-empty"><p>Nothing is waiting or processing.</p><a class="button" href="/add">Add music</a></div>
+{% endif %}

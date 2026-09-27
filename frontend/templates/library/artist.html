@@ -1,0 +1,7 @@
+{% extends "base.html" %}
+{% block title %}{{ artist.canonical_name }} · {{ app_name }}{% endblock %}
+{% block content %}
+<nav class="breadcrumbs" aria-label="Breadcrumb"><a href="/library">Library</a><span aria-hidden="true">/</span><a href="/library/artists">Artists</a><span aria-hidden="true">/</span><span aria-current="page">{{ artist.canonical_name }}</span></nav>
+<section class="page-heading"><p class="eyebrow">Artist</p><h1>{{ artist.canonical_name }}</h1><p>{{ artist.album_count }} albums · {{ artist.track_count }} tracks · {{ artist.total_bytes|filesize }} · {{ '%.0f'|format((artist.flac_track_count / artist.track_count * 100) if artist.track_count else 0) }}% FLAC</p></section>
+<section class="album-grid" aria-label="Albums by {{ artist.canonical_name }}">{% for album in albums %}<a class="album-card" href="/library/albums/{{ album.id }}"><span class="album-art-placeholder" aria-hidden="true">FD</span><div><strong>{{ album.title }}</strong><span>{{ album.year or 'Year unknown' }} · {{ album.track_count }} tracks</span><span>{{ album.codec_summary or 'Format unknown' }} · {{ album.total_bytes|filesize }}</span><span>{{ 'Artwork ✓' if album.artwork_present else 'Artwork missing' }} · {{ 'Metadata ✓' if album.metadata_complete else 'Metadata incomplete' }}</span></div></a>{% else %}<div class="empty"><p>No albums indexed for this artist.</p></div>{% endfor %}</section>
+{% endblock %}

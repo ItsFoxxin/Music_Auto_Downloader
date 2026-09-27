@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}Acquisition queue · {{ app_name }}{% endblock %}
+{% block content %}
+<section class="page-heading split">
+  <div><p class="eyebrow">Manual acquisition</p><h1>Queue</h1><p>Persistent requests waiting for a download or moving through the Stage 1 importer.</p></div>
+  <a class="button primary" href="/add">Add Spotify links</a>
+</section>
+{% if created %}<div class="success-banner" role="status">{{ created }} acquisition{{ '' if created == 1 else 's' }} added to the queue.</div>{% endif %}
+
+<form class="filter-bar" action="/acquisitions" method="get">
+  <label for="queue-state">Status</label>
+  <select id="queue-state" name="state">
+    <option value="">All states</option>
+    {% for state in acquisition_states %}<option value="{{ state }}"{% if state == selected_state %} selected{% endif %}>{{ state|replace('_', ' ')|title }}</option>{% endfor %}
+  </select>
+  <button class="button" type="submit">Filter</button>
+</form>
+
+<section class="panel table-panel" aria-labelledby="queue-heading">
+  <div class="panel-heading"><div><p class="eyebrow">{{ total }} requests</p><h2 id="queue-heading">Acquisition jobs</h2></div></div>
+  <div class="table-wrap">
+    <table>
+      <caption class="sr-only">Acquisition jobs</caption>
+      <thead><tr><th scope="col">Request</th><th scope="col">Source</th><th scope="col">Format</th><th scope="col">Status</th><th scope="col">Updated</th></tr></thead>
+      <tbody>
+      {% for acquisition in acquisitions %}
+        {% set state = effective_state(acquisition) %}
+        <tr>
+          <td><a href="/acquisitions/{{ acquisition.id }}"><strong>{{ acquisition.display_title }}</strong></a><small>{{ acquisition.source_identifier }}</small></td>
+          <td>{{ acquisition.source_type|title }}</td>
+          <td>{{ acquisition.preferred_format|replace('_', ' ') }}</td>
+          <td><span class="status status-{{ state|lower }}">{{ state|replace('_', ' ') }}</span></td>
+          <td>{{ acquisition.updated_at|datetime }}</td>
+        </tr>
+      {% else %}
+        <tr><td colspan="5">No acquisition jobs match this view.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% if total > page_size %}<nav class="pagination" aria-label="Queue pages">{% if page > 1 %}<a class="button" href="?page={{ page - 1 }}{% if selected_state %}&amp;state={{ selected_state }}{% endif %}">Previous</a>{% endif %}<span>Page {{ page }}</span>{% if page * page_size < total %}<a class="button" href="?page={{ page + 1 }}{% if selected_state %}&amp;state={{ selected_state }}{% endif %}">Next</a>{% endif %}</nav>{% endif %}
+{% endblock %}

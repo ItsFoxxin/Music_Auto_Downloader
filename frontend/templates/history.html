@@ -1,0 +1,6 @@
+{% extends "base.html" %}
+{% block title %}History · {{ app_name }}{% endblock %}
+{% block content %}
+<section class="page-heading"><p class="eyebrow">Unified audit trail</p><h1>History</h1><p>Follow acquisition requests and direct imports through one persistent activity view.</p></section>
+<section class="panel table-panel" aria-labelledby="history-heading"><div class="panel-heading"><div><p class="eyebrow">Most recent first</p><h2 id="history-heading">Activity</h2></div></div><div class="table-wrap"><table><caption class="sr-only">Acquisition and import history</caption><thead><tr><th scope="col">Request / source</th><th scope="col">Type</th><th scope="col">Status</th><th scope="col">Tracks</th><th scope="col">Jellyfin</th><th scope="col">Updated</th></tr></thead><tbody>{% for item in history_items %}<tr><td><a href="{{ item.url }}"><strong>{{ item.title }}</strong></a><small>{{ item.source|replace('_', ' ') }}</small></td><td>{{ item.kind|title }}</td><td><span class="status status-{{ item.state|lower }}">{{ item.state|replace('_', ' ') }}</span></td><td>{{ item.track_count }}</td><td>{{ item.jellyfin_state|replace('_', ' ') if item.jellyfin_state else '—' }}</td><td>{{ item.updated_at|datetime }}</td></tr>{% else %}<tr><td colspan="6">No activity yet.</td></tr>{% endfor %}</tbody></table></div></section>
+{% endblock %}

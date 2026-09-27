@@ -1,33 +1,145 @@
-version: '3.9'
+name: fox-den-music
+
+x-build: &foxden-build
+  context: ./backend
+  args:
+    APP_UID: "${PUID:-10001}"
+    APP_GID: "${PGID:-10001}"
+
+x-environment: &foxden-environment
+  APP_ENVIRONMENT: "${APP_ENVIRONMENT:-production}"
+  CONFIG_DIR: /config
+  STAGING_DIR: /staging
+  DATABASE_URL: sqlite:////config/foxden-music.db
+  LOG_LEVEL: "${LOG_LEVEL:-INFO}"
+  FILE_UMASK: "${FILE_UMASK:-0027}"
+  MAX_UPLOAD_BYTES: "${MAX_UPLOAD_BYTES:-4294967296}"
+  UPLOAD_CHUNK_BYTES: "${UPLOAD_CHUNK_BYTES:-1048576}"
+  ARCHIVE_MAX_FILES: "${ARCHIVE_MAX_FILES:-2000}"
+  ARCHIVE_MAX_TOTAL_BYTES: "${ARCHIVE_MAX_TOTAL_BYTES:-8589934592}"
+  ARCHIVE_MAX_ENTRY_BYTES: "${ARCHIVE_MAX_ENTRY_BYTES:-2147483648}"
+  ARCHIVE_MAX_COMPRESSION_RATIO: "${ARCHIVE_MAX_COMPRESSION_RATIO:-250}"
+  FFPROBE_PATH: ffprobe
+  FFPROBE_TIMEOUT_SECONDS: "${FFPROBE_TIMEOUT_SECONDS:-90}"
+  FFMPEG_PATH: ffmpeg
+  FFMPEG_TIMEOUT_SECONDS: "${FFMPEG_TIMEOUT_SECONDS:-180}"
+  MUSICBRAINZ_CONTACT: "${MUSICBRAINZ_CONTACT:-}"
+  MUSICBRAINZ_BASE_URL: "${MUSICBRAINZ_BASE_URL:-https://musicbrainz.org/ws/2}"
+  COVER_ART_BASE_URL: "${COVER_ART_BASE_URL:-https://coverartarchive.org}"
+  METADATA_HTTP_TIMEOUT_SECONDS: "${METADATA_HTTP_TIMEOUT_SECONDS:-20}"
+  METADATA_CACHE_DAYS: "${METADATA_CACHE_DAYS:-30}"
+  AUTOMATIC_MATCH_THRESHOLD: "${AUTOMATIC_MATCH_THRESHOLD:-94}"
+  AUTOMATIC_MATCH_MARGIN: "${AUTOMATIC_MATCH_MARGIN:-8}"
+  MAX_RELEASE_CANDIDATES: "${MAX_RELEASE_CANDIDATES:-5}"
+  MAX_ARTWORK_BYTES: "${MAX_ARTWORK_BYTES:-26214400}"
+  MAX_ARTWORK_PIXELS: "${MAX_ARTWORK_PIXELS:-40000000}"
+  SPOTIDOWNLOADER_URL: "${SPOTIDOWNLOADER_URL:-https://spotidownloader.com/}"
+  SPOTIFY_BATCH_MAX_URLS: "${SPOTIFY_BATCH_MAX_URLS:-100}"
+  SPOTIFY_BATCH_MAX_CHARACTERS: "${SPOTIFY_BATCH_MAX_CHARACTERS:-20000}"
+
+x-service: &foxden-service
+  image: fox-den-music:2.1.0
+  build: *foxden-build
+  user: "${PUID:-10001}:${PGID:-10001}"
+  init: true
+  read_only: true
+  restart: unless-stopped
+  cap_drop:
+    - ALL
+  security_opt:
+    - no-new-privileges:true
+  tmpfs:
+    - /tmp:rw,noexec,nosuid,nodev,size=256m,mode=1777
 
 services:
-  music_auto_downloader_backend:
-    build: backend/
-    image: foxxin/music_auto_downloader_backend
-    container_name: music_auto_downloader_backend
+  web:
+    <<: *foxden-service
+    mem_limit: "${WEB_MEMORY_LIMIT:-768m}"
+    command: ["foxden-music-web"]
+    environment:
+      <<: *foxden-environment
+      MUSIC_DIR: /tmp/foxden-web-no-library
+      WEB_HOST: 0.0.0.0
+      WEB_PORT: "8000"
+      WEB_WORKERS: "1"
+      TMPDIR: /staging/.upload-tmp
+      CSRF_SECRET_FILE: "${CSRF_SECRET:+/run/secrets/csrf_secret}"
+    secrets:
+      - source: csrf_secret
+        target: csrf_secret
+        uid: "${PUID:-10001}"
+        gid: "${PGID:-10001}"
+        mode: 0440
+    ports:
+      - "${WEB_BIND_IP:-127.0.0.1}:${WEB_PORT:-8000}:8000"
     volumes:
-      - ./music:/app/music_auto_downloader_backend/downloads
-    networks:
-      - music_auto_downloader
-    ports:
-      - "5001:5001"
-    stdin_open: true
-    tty: true
-    restart: always
+      - type: bind
+        source: "${CONFIG_PATH:-./data/config}"
+        target: /config
+        bind:
+          create_host_path: false
+      - type: bind
+        source: "${STAGING_PATH:-./data/staging}"
+        target: /staging
+        bind:
+          create_host_path: false
+    healthcheck:
+      test: ["CMD", "python", "-m", "foxden_music.healthcheck", "web"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    stop_grace_period: 20s
 
-  music_auto_downloader_frontend:
-    build: frontend/
-    image: foxxin/music_auto_downloader_frontend
-    container_name: music_auto_downloader_frontend
-    networks:
-      - music_auto_downloader
-    ports:
-      - "5000:5000"
-    stdin_open: true
-    tty: true
-    restart: always
+  worker:
+    <<: *foxden-service
+    mem_limit: "${WORKER_MEMORY_LIMIT:-1g}"
+    command: ["foxden-music-worker"]
+    environment:
+      <<: *foxden-environment
+      MUSIC_DIR: /music
+      WORKER_POLL_SECONDS: "${WORKER_POLL_SECONDS:-2}"
+      LIBRARY_SCAN_INTERVAL_SECONDS: "${LIBRARY_SCAN_INTERVAL_SECONDS:-21600}"
+      STORAGE_SNAPSHOT_INTERVAL_SECONDS: "${STORAGE_SNAPSHOT_INTERVAL_SECONDS:-900}"
+      INVENTORY_COMMIT_BATCH_SIZE: "${INVENTORY_COMMIT_BATCH_SIZE:-50}"
+      WORKER_HEARTBEAT_PATH: /tmp/foxden-music-worker-heartbeat.json
+      WORKER_HEARTBEAT_MAX_AGE_SECONDS: "${WORKER_HEARTBEAT_MAX_AGE_SECONDS:-120}"
+      JELLYFIN_URL: "${JELLYFIN_URL:-}"
+      JELLYFIN_API_KEY: "${JELLYFIN_API_KEY:-}"
+      JELLYFIN_API_KEY_FILE: "${JELLYFIN_API_KEY:+/run/secrets/jellyfin_api_key}"
+      JELLYFIN_TIMEOUT_SECONDS: "${JELLYFIN_TIMEOUT_SECONDS:-15}"
+    secrets:
+      - source: jellyfin_api_key
+        target: jellyfin_api_key
+        uid: "${PUID:-10001}"
+        gid: "${PGID:-10001}"
+        mode: 0440
+    volumes:
+      - type: bind
+        source: "${CONFIG_PATH:-./data/config}"
+        target: /config
+        bind:
+          create_host_path: false
+      - type: bind
+        source: "${STAGING_PATH:-./data/staging}"
+        target: /staging
+        bind:
+          create_host_path: false
+      - type: bind
+        source: "${MUSIC_PATH:-./data/music}"
+        target: /music
+        bind:
+          create_host_path: false
+    healthcheck:
+      test: ["CMD", "python", "-m", "foxden_music.healthcheck", "worker"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    stop_grace_period: 1m
 
-networks:
-  music_auto_downloader:
-    driver: bridge
-    
+secrets:
+  csrf_secret:
+    environment: CSRF_SECRET
+  jellyfin_api_key:
+    environment: JELLYFIN_API_KEY

@@ -1,0 +1,8 @@
+{% extends "base.html" %}
+{% block title %}Albums · {{ app_name }}{% endblock %}
+{% block content %}
+<section class="page-heading"><p class="eyebrow">Library</p><h1>Albums</h1><p>{{ total }} indexed album{{ '' if total == 1 else 's' }}.</p></section>
+<form class="filter-bar" method="get" action="/library/albums"><label for="album-search">Search albums or artists</label><input id="album-search" type="search" name="q" value="{{ q }}"><button class="button" type="submit">Search</button></form>
+<section class="album-grid">{% for album in albums %}<a class="album-card" href="/library/albums/{{ album.id }}"><span class="album-art-placeholder" aria-hidden="true">FD</span><div><strong>{{ album.title }}</strong><span>{{ album.album_artist }} · {{ album.year or 'Year unknown' }}</span><span>{{ album.track_count }} tracks · {{ album.codec_summary or 'Format unknown' }}</span><span>{{ album.total_bytes|filesize }}</span></div></a>{% else %}<div class="empty"><p>No albums match this search.</p></div>{% endfor %}</section>
+{% if total > page_size %}<nav class="pagination" aria-label="Album pages">{% if page > 1 %}<a class="button" href="?page={{ page - 1 }}&amp;q={{ q }}">Previous</a>{% endif %}<span>Page {{ page }}</span>{% if page * page_size < total %}<a class="button" href="?page={{ page + 1 }}&amp;q={{ q }}">Next</a>{% endif %}</nav>{% endif %}
+{% endblock %}

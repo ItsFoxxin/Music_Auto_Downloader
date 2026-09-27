@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}Needs review · {{ app_name }}{% endblock %}
+{% block content %}
+<section class="page-heading"><p class="eyebrow">Action required</p><h1>Needs review</h1><p>Resolve metadata or library conflicts without losing the acquisition-to-import trace.</p></section>
+<section class="panel">
+  <div class="panel-heading"><div><p class="eyebrow">{{ acquisitions|length + jobs|length }} waiting</p><h2>Review queue</h2></div></div>
+  <div class="job-list">
+    {% for acquisition in acquisitions %}<a class="job-row" href="/acquisitions/{{ acquisition.id }}"><div><strong>{{ acquisition.display_title }}</strong><span>Acquisition · linked import {{ acquisition.associated_import_job_id or 'not started' }}</span></div><span class="status status-needs_review">Needs review</span></a>{% endfor %}
+    {% for job in jobs %}<a class="job-row" href="/jobs/{{ job.id }}"><div><strong>{{ job.display_name }}</strong><span>Direct import · {{ job.review_reason or 'Metadata selection required' }}</span></div><span class="status status-needs_review">Needs review</span></a>{% endfor %}
+    {% if not acquisitions and not jobs %}<div class="empty"><p>Nothing needs attention right now.</p><a class="button" href="/">Return to dashboard</a></div>{% endif %}
+  </div>
+</section>
+{% endblock %}

@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}{{ job.display_name }} · {{ app_name }}{% endblock %}
+{% block content %}
+<section class="page-heading split">
+  <div><p class="eyebrow">Import job</p><h1>{{ job.display_name }}</h1><p class="mono">{{ job.id }}</p></div>
+  <span
+    class="status large status-{{ job.state|lower }}"
+    data-job-state-badge
+    role="status"
+    aria-live="polite"
+    aria-atomic="true"
+  >{{ job.state|replace('_', ' ') }}</span>
+</section>
+<div id="job-status" data-job-status-url="/jobs/{{ job.id }}/status" data-terminal="{{ 'true' if job.state in ['COMPLETE', 'FAILED', 'CANCELLED', 'NEEDS_REVIEW'] and not job.jellyfin_retry_requested else 'false' }}" aria-busy="false">
+  {% include "partials/job_status.html" %}
+</div>
+{% endblock %}

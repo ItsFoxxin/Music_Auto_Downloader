@@ -1,0 +1,83 @@
+<div class="detail-grid">
+  <section class="panel">
+    <div class="panel-heading"><div><p class="eyebrow">Progress</p><h2>Processing timeline</h2></div></div>
+    <ol class="timeline">
+      {% for event in job.events|reverse %}
+      <li class="event-{{ event.level|lower }}"><span class="timeline-dot"></span><div><strong>{{ event.message }}</strong><span>{{ event.created_at|datetime }} · {{ event.state|replace('_', ' ') }}</span></div></li>
+      {% endfor %}
+    </ol>
+  </section>
+  <aside class="stack">
+    <section class="panel key-values">
+      <h2>Job details</h2>
+      <dl>
+        <div><dt>Tracks</dt><dd>{{ job.track_count }}</dd></div>
+        <div><dt>Attempt</dt><dd>{{ job.attempt }}</dd></div>
+        <div><dt>Created</dt><dd>{{ job.created_at|datetime }}</dd></div>
+        <div><dt>Output</dt><dd class="mono wrap">{{ job.output_relative_path or '—' }}</dd></div>
+        <div><dt>Jellyfin</dt><dd>{{ job.jellyfin_state|replace('_', ' ') }}</dd></div>
+      </dl>
+    </section>
+    {% if job.state == 'NEEDS_REVIEW' %}
+    <section class="panel review-panel">
+      <p class="eyebrow">Action required</p><h2>Choose the correct metadata</h2>
+      <p>{{ job.review_reason or 'The match was ambiguous.' }}</p>
+      {% if job.review_kind == 'METADATA' or not job.review_kind %}<form action="/jobs/{{ job.id }}/review" method="post">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <fieldset>
+          <legend>Release candidates</legend>
+          {% for candidate in job.candidates %}
+          {% set candidate_view = candidate_views.get(candidate.id, {}) %}
+          <div class="candidate">
+            <input id="release-{{ candidate.id }}" type="radio" name="selection" value="{{ candidate.id }}" required>
+            <div class="candidate-details">
+              <label class="candidate-title" for="release-{{ candidate.id }}"><strong>{{ candidate.title }}</strong></label>
+              <small>{{ candidate.artist_credit }} · {{ candidate.release_date or 'Date unknown' }} · {{ candidate.country or 'Worldwide' }}</small>
+              <small>{{ candidate.media_summary or candidate.track_count ~ ' tracks' }} · confidence {{ '%.1f'|format(candidate.score) }}%</small>
+              <small>Release status: {{ candidate.status or 'Unknown' }}</small>
+              {% if candidate.disambiguation %}<small>{{ candidate.disambiguation }}</small>{% endif %}
+              <small class="candidate-mbid">MBID: <code class="mono wrap">{{ candidate.musicbrainz_release_id }}</code>{% if candidate_view.release_url %} · <a href="{{ candidate_view.release_url }}" rel="external">View on MusicBrainz</a>{% endif %}</small>
+              {% if candidate_view.tracks %}
+              <div class="candidate-evidence">
+                <span>Track evidence</span>
+                <ol aria-label="Track evidence for {{ candidate.title }}">
+                  {% for track in candidate_view.tracks %}
+                  <li><span>{{ track.disc_number }}.{{ track.track_number }} {{ track.title }}</span><span>{{ track.duration_seconds|duration }}</span></li>
+                  {% endfor %}
+                </ol>
+                {% if candidate_view.remaining_tracks %}<small>+ {{ candidate_view.remaining_tracks }} more track{{ '' if candidate_view.remaining_tracks == 1 else 's' }}</small>{% endif %}
+              </div>
+              {% endif %}
+            </div>
+          </div>
+          {% endfor %}
+          <div class="candidate">
+            <input id="release-incoming" type="radio" name="selection" value="incoming" required>
+            <div class="candidate-details">
+              <label class="candidate-title" for="release-incoming"><strong>Use incoming tags</strong></label>
+              {% if job.tracks %}<small>{{ job.tracks[0].album_artist or job.tracks[0].artist or 'Artist missing' }} · {{ job.tracks[0].album or 'Album missing' }} · release date {{ job.tracks[0].release_date or job.tracks[0].year or 'missing' }}</small>{% endif %}
+              <small>Keep the supplied artist, album, titles, date, and numbering without MusicBrainz IDs. Fox Den fills in omitted track totals after verifying the files are numbered continuously; explicit totals that indicate a partial album still require review.</small>
+            </div>
+          </div>
+        </fieldset>
+        <button class="button primary" type="submit">Continue import</button>
+      </form>{% else %}<div class="notice"><strong>Existing music was preserved.</strong> Milestone 1 does not overwrite or merge this conflict automatically. Inspect the listed tracks and library destination before deciding how to resolve it.</div>{% endif %}
+    </section>
+    {% endif %}
+    {% if job.state == 'FAILED' %}
+    <section class="panel danger-panel"><h2>Import failed</h2><p>{{ job.error_message }}</p>{% if job.retryable %}<form action="/jobs/{{ job.id }}/retry" method="post"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button class="button" type="submit">Retry safely</button></form>{% endif %}<form action="/jobs/{{ job.id }}/cancel" method="post"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button class="button" type="submit">Dismiss failed import</button></form></section>
+    {% elif job.state in ['QUEUED', 'NEEDS_REVIEW'] %}
+    <section class="panel danger-panel"><h2>Cancel import</h2><p>This stops a queued or paused import without deleting its staged source or history.</p><form action="/jobs/{{ job.id }}/cancel" method="post"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button class="button" type="submit">Cancel import</button></form></section>
+    {% elif job.state == 'CANCELLED' %}
+    <section class="panel danger-panel"><h2>Import cancelled</h2><p>The job remains in History and its staged evidence was preserved. No music was deleted.</p></section>
+    {% endif %}
+    {% if job.state == 'COMPLETE' and job.jellyfin_retry_requested %}
+    <section class="panel warning-panel"><h2>Jellyfin refresh retry queued</h2><p>Fox Den Music is waiting for the worker to persist the retry result. This page will update automatically.</p></section>
+    {% elif job.state == 'COMPLETE' and job.jellyfin_state == 'FAILED' %}
+    <section class="panel warning-panel"><h2>Music imported; Jellyfin refresh failed</h2><p>{{ job.jellyfin_error }}</p>{% if job.jellyfin_retryable %}<form action="/jobs/{{ job.id }}/retry-jellyfin" method="post"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button class="button" type="submit">Retry refresh</button></form>{% else %}<div class="notice"><strong>Retry is disabled for this failure.</strong> It indicates a Jellyfin configuration or authentication problem. Correct the Jellyfin URL, API key, or library settings, then start the scan from Jellyfin; the music import is already complete.</div>{% endif %}</section>
+    {% endif %}
+  </aside>
+</div>
+{% if job.tracks %}
+<section class="panel table-panel"><div class="panel-heading"><div><p class="eyebrow">Audio inspection</p><h2>{{ job.tracks|length }} tracks</h2></div></div><div class="table-wrap"><table><thead><tr><th>#</th><th>Title / original file</th><th>Codec</th><th>Duration</th><th>Properties</th><th>Duplicate</th></tr></thead><tbody>{% for track in job.tracks %}<tr><td>{{ track.disc_number or 1 }}.{{ track.track_number or loop.index }}</td><td><strong>{{ track.title or track.original_filename }}</strong><small>{{ track.artist or '' }}</small></td><td>{{ track.codec|upper }}</td><td>{{ track.duration_seconds|duration }}</td><td><small>{{ track.sample_rate or '—' }} Hz · {{ track.bit_depth or '—' }} bit · {{ track.channels or '—' }} ch</small></td><td>{{ track.duplicate_status|replace('_', ' ') }}</td></tr>{% endfor %}</tbody></table></div></section>
+{% endif %}

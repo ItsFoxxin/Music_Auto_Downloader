@@ -221,6 +221,7 @@ def test_acquisition_detail_starts_watched_server_download(
         assert f'action="/acquisitions/{acquisition_id}/begin-download"' in detail.text
         assert "Copy URL &amp; start watched download" in detail.text
         assert "data-copy-open-form" in detail.text
+        assert 'data-browser-url="http://10.0.30.20:5800"' in detail.text
         assert 'target="_blank"' not in detail.text
         assert "Open SpotiDownloader" not in detail.text
 
@@ -232,7 +233,9 @@ def test_acquisition_detail_starts_watched_server_download(
         )
 
         assert started.status_code == 303
-        assert started.headers["location"] == "http://10.0.30.20:5800"
+        assert started.headers["location"] == (
+            f"/acquisitions/{acquisition_id}?download=started"
+        )
     with database.session() as session:
         acquisition = session.get(AcquisitionJob, acquisition_id)
         assert acquisition is not None

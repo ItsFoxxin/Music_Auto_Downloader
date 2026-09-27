@@ -154,7 +154,7 @@ def test_musicbrainz_search_looks_up_full_releases_scores_locally_and_caches() -
     def handler(request: httpx.Request) -> httpx.Response:
         requests.append(request)
         assert request.headers["User-Agent"] == (
-            "FoxDenMusic/2.3.0 (maintainer@example.test)"
+            "FoxDenMusic/2.3.1 (maintainer@example.test)"
         )
         if request.url.path == "/ws/2/release/":
             assert request.url.params["fmt"] == "json"

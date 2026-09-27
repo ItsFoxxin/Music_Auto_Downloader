@@ -1171,8 +1171,15 @@ def create_app(settings: Settings | None = None, database: Database | None = Non
                 AcquisitionState.WAITING_FOR_DOWNLOAD,
                 "Server browser opened; watching the download inbox",
             )
-        destination = settings.remote_browser_url or settings.spotidownloader_url
-        return RedirectResponse(url=destination, status_code=status.HTTP_303_SEE_OTHER)
+        # Keep the form response on this origin. The application's CSP correctly
+        # restricts form submissions to ``'self'`` and Firefox applies that
+        # restriction to redirects as well. Client-side code performs the
+        # separate top-level navigation to the configured server browser only
+        # after this state transition succeeds.
+        return RedirectResponse(
+            url=f"/acquisitions/{acquisition.id}?download=started",
+            status_code=status.HTTP_303_SEE_OTHER,
+        )
 
     @app.post("/acquisitions/{acquisition_id}/upload")
     async def acquisition_upload(

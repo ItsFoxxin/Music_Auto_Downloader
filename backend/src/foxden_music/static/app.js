@@ -108,7 +108,7 @@
     return copied;
   };
 
-  document.querySelectorAll("[data-copy-target]").forEach((button) => {
+  document.querySelectorAll("button[data-copy-target]").forEach((button) => {
     button.addEventListener("click", async () => {
       const field = document.getElementById(button.dataset.copyTarget);
       if (!field) return;
@@ -129,7 +129,9 @@
     form.addEventListener("submit", async (event) => {
       event.preventDefault();
       const field = document.getElementById(form.dataset.copyTarget);
-      if (!field) return;
+      const submit = form.querySelector("[data-copy-open-submit]");
+      const browserUrl = form.dataset.browserUrl;
+      if (!field || !browserUrl) return;
       const copied = await copyField(field);
       if (!copied) {
         field.focus();
@@ -139,7 +141,25 @@
         }
         return;
       }
-      form.submit();
+      if (submit) submit.disabled = true;
+      if (feedback) feedback.textContent = "URL copied. Starting the watched download…";
+      try {
+        const response = await fetch(form.action, {
+          method: (form.method || "POST").toUpperCase(),
+          body: new FormData(form),
+          headers: { "X-Requested-With": "FoxDenMusic" },
+          credentials: "same-origin"
+        });
+        if (!response.ok) {
+          throw new Error(`Server returned ${response.status}`);
+        }
+        window.location.assign(browserUrl);
+      } catch (_) {
+        if (submit) submit.disabled = false;
+        if (feedback) {
+          feedback.textContent = "Fox Den could not start watching this download. Refresh the page and try again.";
+        }
+      }
     });
   });
 })();

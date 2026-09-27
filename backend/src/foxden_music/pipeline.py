@@ -180,21 +180,34 @@ def _natural_path_key(value: str) -> tuple[tuple[int, object], ...]:
     )
 
 
+DOWNLOAD_SOURCE_PREFIX = re.compile(
+    r"^\s*(?:spoti\s*downloader(?:\.com)?|spotidownloader(?:\.com)?|spotify\s*downloader)\s*[-_:]\s*",
+    re.IGNORECASE,
+)
+
+
+def _clean_path_hint(value: str) -> str:
+    cleaned = Path(value.replace("\\", "/")).stem
+    cleaned = DOWNLOAD_SOURCE_PREFIX.sub("", cleaned)
+    cleaned = re.sub(r"\s+", " ", cleaned).strip(" \t\r\n'\"“”‘’[](){}")
+    return cleaned or Path(value).stem or value or "Unknown"
+
+
 def _infer_path_hints(sources: list[SourceAudio], display_name: str) -> tuple[str, str | None]:
     split_paths = [source.original_path.replace("\\", "/").split("/") for source in sources]
-    album_fallback = Path(display_name).stem
+    album_fallback = _clean_path_hint(display_name)
     artist_fallback: str | None = None
     if split_paths:
         first_parts = [parts[0] for parts in split_paths if len(parts) >= 2]
         if first_parts and len(set(first_parts)) == 1:
-            album_fallback = first_parts[0]
+            album_fallback = _clean_path_hint(first_parts[0])
         three_part = [parts for parts in split_paths if len(parts) >= 3]
         if three_part and len(three_part) == len(split_paths):
             artists = {parts[0] for parts in three_part}
             albums = {parts[1] for parts in three_part}
             if len(artists) == 1 and len(albums) == 1:
-                artist_fallback = next(iter(artists))
-                album_fallback = next(iter(albums))
+                artist_fallback = _clean_path_hint(next(iter(artists)))
+                album_fallback = _clean_path_hint(next(iter(albums)))
     return album_fallback, artist_fallback
 
 
@@ -203,7 +216,9 @@ TRACK_PREFIX = re.compile(r"^\s*(?:disc\s*\d+\s*[-_. ]*)?\d+\s*[-_. ]+", re.IGNO
 
 def _title_from_original(original_path: str) -> str:
     stem = Path(original_path.replace("\\", "/")).stem
-    return TRACK_PREFIX.sub("", stem).strip() or stem or "Unknown Track"
+    title = TRACK_PREFIX.sub("", stem).strip()
+    title = DOWNLOAD_SOURCE_PREFIX.sub("", title).strip(" \t\r\n'\"“”‘’[](){}")
+    return title or stem or "Unknown Track"
 
 
 def _inspect_sources(
@@ -591,8 +606,18 @@ def _release_assignment_compatible(track: Track, release_track: Mapping[str, Any
         return False
     if not _release_titles_compatible(track.title, release_track.get("title")):
         return False
+    return True
+
+
+def _release_duration_compatible(track: Track, release_track: Mapping[str, Any]) -> bool:
     duration = float(release_track.get("duration") or 0)
-    return not duration or abs(duration - track.duration_seconds) <= 20
+    if not duration or abs(duration - track.duration_seconds) <= 20:
+        return True
+    source_isrc = _match_text(track.isrc)
+    release_isrc = _match_text(release_track.get("isrc"))
+    if source_isrc and release_isrc and source_isrc != release_isrc:
+        return False
+    return _release_titles_compatible(track.title, release_track.get("title"))
 
 
 def _assign_release_tracks(
@@ -611,6 +636,12 @@ def _assign_release_tracks(
     if positions_are_explicit and len(set(explicit_keys)) == len(tracks) and all(key in keyed for key in explicit_keys):
         assigned = [keyed[key] for key in explicit_keys]
         if all(_release_assignment_compatible(track, row) for track, row in zip(tracks, assigned)):
+            return assigned
+        # Some download sources preserve reliable 1..N positions but fill titles
+        # with provider noise, partial names, or stale tags. If the selected
+        # edition has the same layout and durations do not contradict the files,
+        # let MusicBrainz supply the canonical titles instead of forcing review.
+        if all(_release_duration_compatible(track, row) for track, row in zip(tracks, assigned)):
             return assigned
         raise ReviewRequired(
             "Incoming track positions conflict with titles, ISRCs, or durations in the selected release. Choose another edition.",
@@ -720,7 +751,7 @@ def _metadata_plans(
         candidate_date = str(payload.get("date") or candidate.release_date or "") or None
         for track, release_track in zip(ordered_tracks, assignments):
             duration = release_track.get("duration") or 0
-            if duration and abs(float(duration) - track.duration_seconds) > 20:
+            if not _release_duration_compatible(track, release_track):
                 raise ReviewRequired(
                     "Track durations do not align with the selected release. Choose another edition."
                 )

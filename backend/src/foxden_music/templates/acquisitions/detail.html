@@ -10,11 +10,16 @@
   <div>
     <section class="panel provider-panel" aria-labelledby="provider-heading">
       <p class="eyebrow">Human-assisted download</p><h2 id="provider-heading">Get the requested file</h2>
-      <ol class="instruction-list"><li>Copy the validated Spotify URL.</li><li>Open SpotiDownloader and complete its prompts or CAPTCHA yourself.</li><li>Download the ZIP or audio file, then upload it below.</li></ol>
+      <ol class="instruction-list"><li>Use the button below to copy the validated Spotify URL and open the server browser.</li><li>On a phone, open the server browser's left-side three-dot panel and paste into its clipboard box. Then paste into SpotiDownloader and complete any prompts or CAPTCHA yourself. Downloader popups open as visible tabs.</li><li>Save the ZIP or audio file to the browser's <code>/downloads</code> folder, then import it from the server inbox.</li></ol>
       <label for="source-url"><strong>Spotify URL</strong></label>
       <div class="copy-row"><input id="source-url" type="text" value="{{ acquisition.source_url }}" readonly><button class="button" type="button" data-copy-target="source-url">Copy URL</button></div>
       <p class="copy-feedback" data-copy-feedback role="status" aria-live="polite"></p>
-      <a class="button primary" href="{{ provider_url }}" target="_blank" rel="noopener noreferrer external">Open SpotiDownloader</a>
+      {% if remote_browser_url %}
+      <a class="button primary" href="{{ remote_browser_url }}" rel="external" data-copy-open-target="source-url">Copy URL &amp; open downloader</a>
+      <p class="muted fine-print">The server browser opens directly on <code>{{ provider_url }}</code>. Its left-side three-dot panel contains the clipboard bridge for moving the copied URL into remote Firefox.</p>
+      {% else %}
+      <a class="button primary" href="{{ provider_url }}" rel="external">Open SpotiDownloader</a>
+      {% endif %}
     </section>
 
     <section class="panel" aria-labelledby="trace-heading">

@@ -154,7 +154,7 @@ def test_musicbrainz_search_looks_up_full_releases_scores_locally_and_caches() -
     def handler(request: httpx.Request) -> httpx.Response:
         requests.append(request)
         assert request.headers["User-Agent"] == (
-            "FoxDenMusic/0.2.0 (maintainer@example.test)"
+            "FoxDenMusic/2.2.5 (maintainer@example.test)"
         )
         if request.url.path == "/ws/2/release/":
             assert request.url.params["fmt"] == "json"
@@ -227,6 +227,57 @@ def test_musicbrainz_search_looks_up_full_releases_scores_locally_and_caches() -
     assert cached_matches == matches
     assert len(requests) == 3
     assert limiter.calls == 3
+
+
+def test_musicbrainz_search_falls_back_when_artist_query_returns_no_releases() -> None:
+    requests: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        requests.append(request)
+        if request.url.path == "/ws/2/release/":
+            query = request.url.params["query"]
+            if "artist:" in query:
+                return httpx.Response(200, json={"releases": []})
+            return httpx.Response(
+                200,
+                json={"releases": [{"id": RELEASE_ID_MATCH, "score": 74}]},
+            )
+        if request.url.path.endswith(RELEASE_ID_MATCH):
+            return httpx.Response(
+                200,
+                json=full_release(
+                    RELEASE_ID_MATCH,
+                    title="Pureflow, Pt. 1",
+                    artist="Fox Den",
+                    date="2026-09-27",
+                    tracks=[
+                        ("Intro", 180_000, "USABC2600001"),
+                        ("Run", 201_000, "USABC2600002"),
+                    ],
+                ),
+            )
+        raise AssertionError(f"Unexpected request: {request.url}")
+
+    client = MusicBrainzClient(
+        integration_settings(),
+        client=httpx.Client(transport=httpx.MockTransport(handler)),
+        limiter=NoWaitLimiter(),
+    )
+
+    matches = client.search_releases(
+        AlbumHints(
+            album="Pureflow, Pt. 1",
+            album_artist="Wrong Download Artist",
+            tracks=(
+                TrackHint("Intro", duration_seconds=180.0),
+                TrackHint("Run", duration_seconds=201.0),
+            ),
+        )
+    )
+
+    assert [match.musicbrainz_release_id for match in matches] == [RELEASE_ID_MATCH]
+    assert "artist:" in requests[0].url.params["query"]
+    assert "artist:" not in requests[1].url.params["query"]
 
 
 def test_musicbrainz_retries_retryable_status_without_skipping_limiter() -> None:

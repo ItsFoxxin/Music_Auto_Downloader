@@ -1,11 +1,20 @@
 # Local configuration and secrets
 .env
 .env.*
+*.env
+*.env.*
 !.env.example
+Fox-Den-Music-production.env
 secrets/
 
 # Runtime data and user-supplied media
 data/
+/browser-config/
+/config/
+/download-inbox/
+/downloads/
+/music/
+/staging/
 *.db
 *.db-*
 *.sqlite
@@ -29,14 +38,17 @@ dist/
 
 # Tests and tooling
 .pytest_cache/
+.pytest-cancel*/
 .mypy_cache/
 .ruff_cache/
 .coverage
 coverage.xml
 htmlcov/
+*.log
 
 # Editors and operating systems
 .idea/
 .vscode/
 .DS_Store
 Thumbs.db
+*.codex-original

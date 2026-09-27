@@ -57,7 +57,13 @@ from .enums import (
     PreferredFormat,
     SourceType,
 )
-from .intake import IntakeError, cleanup_staged_job, stage_upload
+from .intake import (
+    IntakeError,
+    cleanup_staged_job,
+    list_download_inbox,
+    stage_inbox_file,
+    stage_upload,
+)
 from .inventory import (
     enqueue_library_scan,
     health_counts as inventory_health_counts,
@@ -934,12 +940,24 @@ def create_app(settings: Settings | None = None, database: Database | None = Non
 
     @app.get("/add", response_class=HTMLResponse)
     def add_music(request: Request) -> HTMLResponse:
+        inbox_error = None
+        inbox_files = []
+        if settings.download_inbox_dir is not None:
+            try:
+                inbox_files = list_download_inbox(settings)
+            except IntakeError as exc:
+                inbox_error = str(exc)
         return templates.TemplateResponse(
             request=request,
             name="add.html",
             context=common_context(
                 request,
                 max_upload_bytes=settings.max_upload_bytes,
+                download_inbox_dir=settings.download_inbox_dir,
+                download_inbox_min_bytes=settings.download_inbox_min_bytes,
+                inbox_files=inbox_files,
+                inbox_error=inbox_error,
+                remote_browser_url=settings.remote_browser_url,
                 source_urls="",
                 preferred_format=PreferredFormat.FLAC.value,
                 form_error=None,
@@ -1068,6 +1086,7 @@ def create_app(settings: Settings | None = None, database: Database | None = Non
                 acquisition=acquisition,
                 effective_state=_effective_acquisition_state(acquisition),
                 provider_url=settings.spotidownloader_url,
+                remote_browser_url=settings.remote_browser_url,
                 timeline_events=_acquisition_timeline(acquisition),
                 max_upload_bytes=settings.max_upload_bytes,
             ),
@@ -1256,6 +1275,75 @@ def create_app(settings: Settings | None = None, database: Database | None = Non
         session.info[_SESSION_ALREADY_COMMITTED_KEY] = True
         session.info.pop(_STAGED_JOB_CLEANUP_KEY, None)
         return RedirectResponse(url=f"/jobs/{job.id}", status_code=status.HTTP_303_SEE_OTHER)
+
+    @app.post("/imports/inbox")
+    def create_import_from_inbox(
+        request: Request,
+        inbox_file: str = Form(...),
+        csrf_token: str = Form(...),
+        session: Session = Depends(session_dependency),
+    ) -> RedirectResponse:
+        request.app.state.csrf.verify(csrf_token)
+        try:
+            job_id, source_path, display_name = stage_inbox_file(inbox_file, settings)
+        except IntakeError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        session.info[_STAGED_JOB_CLEANUP_KEY] = job_id
+        job_root = settings.jobs_dir / job_id
+        job = Job(
+            id=job_id,
+            kind=JobKind.ALBUM_IMPORT.value,
+            source_type=SourceType.INCOMING.value,
+            state=JobState.QUEUED.value,
+            display_name=display_name,
+            source_filename=display_name,
+            source_relative_path=source_path.relative_to(job_root).as_posix(),
+            source_reference=f"inbox:{inbox_file}",
+        )
+        session.add(job)
+        add_event(
+            session,
+            job,
+            "Server download inbox file safely staged and queued",
+            data={"inbox_file": inbox_file, "size": source_path.stat().st_size},
+        )
+        session.flush()
+        session.commit()
+        session.info[_SESSION_ALREADY_COMMITTED_KEY] = True
+        session.info.pop(_STAGED_JOB_CLEANUP_KEY, None)
+        return RedirectResponse(url=f"/jobs/{job.id}", status_code=status.HTTP_303_SEE_OTHER)
+
+    @app.post("/jobs/{job_id}/clear-inbox-download")
+    def clear_inbox_download(
+        request: Request,
+        job_id: str,
+        csrf_token: str = Form(...),
+        session: Session = Depends(session_dependency),
+    ) -> RedirectResponse:
+        request.app.state.csrf.verify(csrf_token)
+        job = load_job(session, job_id)
+        if job.source_type != SourceType.INCOMING.value:
+            raise HTTPException(status_code=409, detail="Only server inbox imports can be cleared this way")
+        if job.state not in {
+            JobState.FAILED.value,
+            JobState.NEEDS_REVIEW.value,
+            JobState.CANCELLED.value,
+        }:
+            raise HTTPException(
+                status_code=409,
+                detail="Only failed, review-paused, or cancelled inbox imports can be cleared",
+            )
+        if job.state != JobState.CANCELLED.value:
+            job.state = JobState.CANCELLED.value
+            job.retryable = False
+            job.finished_at = utcnow()
+            add_event(session, job, "Inbox import cancelled before redownload")
+            sync_acquisitions_for_import_job(session, job)
+        session.flush()
+        session.commit()
+        session.info[_SESSION_ALREADY_COMMITTED_KEY] = True
+        cleanup_staged_job(settings, job_id)
+        return RedirectResponse(url="/add", status_code=status.HTTP_303_SEE_OTHER)
 
     def load_job(session: Session, job_id: str) -> Job:
         job = session.scalar(

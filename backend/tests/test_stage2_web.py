@@ -135,7 +135,7 @@ def test_acquisition_upload_links_the_stage1_import_and_reuses_intake(settings, 
         assert acquisition_id
         detail = client.get(f"/acquisitions/{acquisition_id}")
         assert detail.status_code == 200
-        assert 'rel="noopener noreferrer external"' in detail.text
+        assert 'target="_blank"' not in detail.text
         assert "Open SpotiDownloader" in detail.text
         assert "data-upload-form" in detail.text
         assert "A loose audio file is treated as a one-track release" in detail.text
@@ -179,6 +179,7 @@ def test_acquisition_upload_links_the_stage1_import_and_reuses_intake(settings, 
         assert acquisition.associated_import_job_id
         import_job = session.get(Job, acquisition.associated_import_job_id)
         assert import_job is not None
+
         assert import_job.state == JobState.QUEUED.value
         assert import_job.source_reference == ALBUM_URL
         artifact = session.scalar(
@@ -194,6 +195,31 @@ def test_acquisition_upload_links_the_stage1_import_and_reuses_intake(settings, 
         assert artifact.handed_off_at is not None
         staged = settings.jobs_dir / import_job.id / import_job.source_relative_path
         assert staged.read_bytes() == b"synthetic-stage2-zip"
+
+
+def test_acquisition_detail_opens_configured_server_browser_in_same_tab(settings, database) -> None:
+    settings.remote_browser_url = "http://10.0.30.20:5800"
+    app = create_app(settings, database)
+    with TestClient(app) as client:
+        token = _csrf(client.get("/add").text)
+        queued = client.post(
+            "/acquisitions",
+            data={"csrf_token": token, "preferred_format": "FLAC", "source_urls": ALBUM_URL},
+            follow_redirects=False,
+        )
+        assert queued.status_code == 303
+        with database.session() as session:
+            acquisition_id = session.scalar(select(AcquisitionJob.id))
+        assert acquisition_id
+
+        detail = client.get(f"/acquisitions/{acquisition_id}")
+
+    assert detail.status_code == 200
+    assert 'href="http://10.0.30.20:5800"' in detail.text
+    assert "Copy URL &amp; open downloader" in detail.text
+    assert 'data-copy-open-target="source-url"' in detail.text
+    assert 'target="_blank"' not in detail.text
+    assert "Open SpotiDownloader" not in detail.text
 
 
 def test_waiting_acquisition_can_be_cancelled_safely_and_idempotently(

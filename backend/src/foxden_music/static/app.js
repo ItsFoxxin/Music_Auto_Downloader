@@ -91,23 +91,28 @@
 
 (() => {
   const feedback = document.querySelector("[data-copy-feedback]");
+  const copyField = async (field) => {
+    let copied = false;
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(field.value);
+        copied = true;
+      } else {
+        field.focus();
+        field.select();
+        copied = document.execCommand("copy");
+      }
+    } catch (_) {
+      copied = false;
+    }
+    return copied;
+  };
+
   document.querySelectorAll("[data-copy-target]").forEach((button) => {
     button.addEventListener("click", async () => {
       const field = document.getElementById(button.dataset.copyTarget);
       if (!field) return;
-      let copied = false;
-      try {
-        if (navigator.clipboard && window.isSecureContext) {
-          await navigator.clipboard.writeText(field.value);
-          copied = true;
-        } else {
-          field.focus();
-          field.select();
-          copied = document.execCommand("copy");
-        }
-      } catch (_) {
-        copied = false;
-      }
+      const copied = await copyField(field);
       if (feedback) {
         feedback.textContent = copied
           ? "Spotify URL copied."
@@ -117,6 +122,24 @@
         field.focus();
         field.select();
       }
+    });
+  });
+
+  document.querySelectorAll("[data-copy-open-target]").forEach((link) => {
+    link.addEventListener("click", async (event) => {
+      event.preventDefault();
+      const field = document.getElementById(link.dataset.copyOpenTarget);
+      if (!field) return;
+      const copied = await copyField(field);
+      if (!copied) {
+        field.focus();
+        field.select();
+        if (feedback) {
+          feedback.textContent = "Copy was blocked. Copy the selected URL manually, then press the downloader button again.";
+        }
+        return;
+      }
+      window.location.assign(link.href);
     });
   });
 })();

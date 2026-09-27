@@ -16,8 +16,10 @@ from foxden_music.pipeline import (
     ReviewRequired,
     RetryablePipelineError,
     WorkingPlan,
+    _assign_release_tracks,
     _choose_release,
     _copy_verified_source,
+    _release_duration_compatible,
     _metadata_plans,
     _natural_path_key,
     _prepare_library_album,
@@ -359,6 +361,13 @@ def test_release_title_matching_accepts_parenthetical_feature_credit() -> None:
     assert not _release_titles_compatible("Saki (feat. Aliyah's Interlude)", "Irony")
 
 
+def test_release_duration_matching_allows_clear_title_match_with_drift() -> None:
+    track = _track("30000000-0000-0000-0000-000000000006", sha="6" * 64, title="Pureflow")
+    track.duration_seconds = 176.6
+    assert _release_duration_compatible(track, {"title": "Pureflow", "duration": 109.0})
+    assert not _release_duration_compatible(track, {"title": "Different Song", "duration": 109.0})
+
+
 def test_incoming_partial_album_claim_requires_review(settings, database) -> None:
     job_id = "30000000-0000-0000-0000-000000000006"
     (settings.jobs_dir / job_id).mkdir(parents=True)
@@ -651,3 +660,38 @@ def test_ambiguous_release_candidates_are_persisted_for_review(
         assert job is not None
         assert len(job.candidates) == 2
         assert any("2 release candidate" in event.message for event in job.events)
+
+
+def test_release_assignment_trusts_musicbrainz_titles_when_positions_and_durations_fit() -> None:
+    first = SimpleNamespace(id=1, isrc=None, title="download junk one", duration_seconds=180.0)
+    second = SimpleNamespace(id=2, isrc=None, title="download junk two", duration_seconds=201.0)
+    originals = {
+        1: TagHints(track_number=1, disc_number=1),
+        2: TagHints(track_number=2, disc_number=1),
+    }
+    release_tracks = [
+        {
+            "disc_number": 1,
+            "disc_total": 1,
+            "track_number": 1,
+            "track_total": 2,
+            "title": "Real Intro",
+            "artist": "Artist",
+            "duration": 181.0,
+            "isrc": None,
+        },
+        {
+            "disc_number": 1,
+            "disc_total": 1,
+            "track_number": 2,
+            "track_total": 2,
+            "title": "Real Finale",
+            "artist": "Artist",
+            "duration": 199.5,
+            "isrc": None,
+        },
+    ]
+
+    assigned = _assign_release_tracks([first, second], release_tracks, originals)
+
+    assert [track["title"] for track in assigned] == ["Real Intro", "Real Finale"]

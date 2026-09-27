@@ -39,5 +39,53 @@
     <div class="notice"><strong>Same safe pipeline:</strong> direct and acquisition uploads receive the same archive and audio validation.</div>
     <button class="button" type="submit" data-upload-submit>Queue direct import</button>
   </form>
+
+  <section class="panel form-stack">
+    <div>
+      <p class="eyebrow">Server download inbox</p>
+      <h2>Import without uploading</h2>
+      {% if download_inbox_dir %}
+        <p class="muted">Save completed downloads into <code>{{ download_inbox_dir }}</code>, then queue them here. Fox Den Music will move the file into staging and use the same safe importer.</p>
+        {% if remote_browser_url %}<p><a class="button primary" href="{{ remote_browser_url }}" rel="external">Open downloader in server browser</a></p>{% endif %}
+      {% else %}
+        <p class="muted">Set <code>DOWNLOAD_INBOX_DIR=/downloads</code> and mount a host folder there to import files already saved on the server.</p>
+      {% endif %}
+    </div>
+    {% if inbox_error %}
+      <div class="form-error" role="alert"><strong>Inbox unavailable.</strong><span>{{ inbox_error }}</span></div>
+    {% elif download_inbox_dir and inbox_files %}
+      <div class="table-wrap">
+        <table>
+          <caption class="sr-only">Download inbox files</caption>
+          <thead><tr><th scope="col">File</th><th scope="col">Size</th><th scope="col">Status</th><th scope="col">Action</th></tr></thead>
+          <tbody>
+            {% for file in inbox_files %}
+              <tr>
+                <td><strong>{{ file.display_name }}</strong><small>{{ file.relative_path }}</small></td>
+                <td>{{ file.byte_size|filesize }}</td>
+                <td>{% if file.ready %}<span class="status status-queued">Ready</span>{% else %}<span class="status status-staging">{{ file.reason }}</span>{% endif %}</td>
+                <td>
+                  {% if file.ready %}
+                    <form action="/imports/inbox" method="post">
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                      <input type="hidden" name="inbox_file" value="{{ file.relative_path }}">
+                      <button class="button" type="submit">Import from server</button>
+                    </form>
+                  {% else %}
+                    <span class="muted">Wait for it to finish</span>
+                  {% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <p class="muted">Refresh this page after a download finishes. Partial files such as <code>.crdownload</code> and <code>.part</code> are ignored. Files smaller than {{ download_inbox_min_bytes|filesize }} are held back as likely failed downloads.</p>
+    {% elif download_inbox_dir %}
+      <div class="empty compact-empty"><p>No ZIP or supported audio files are waiting in the inbox.</p></div>
+    {% else %}
+      <div class="notice"><strong>Recommended setup:</strong> point your downloader or optional server browser at a host folder such as <code>/mnt/@usb/sdc2/Media/Music/FoxDenInbox</code>, mount it read/write into both containers as <code>/downloads</code>, then set <code>DOWNLOAD_INBOX_DIR=/downloads</code>.</div>
+    {% endif %}
+  </section>
 </div>
 {% endblock %}

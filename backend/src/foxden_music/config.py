@@ -22,6 +22,13 @@ class Settings(BaseSettings):
     config_dir: Path = Path("/config")
     staging_dir: Path = Path("/staging")
     music_dir: Path = Path("/music")
+    download_inbox_dir: Path | None = None
+    download_inbox_settle_seconds: int = 30
+    download_inbox_min_bytes: int = 1024 * 1024
+    download_inbox_recursive: bool = True
+    download_inbox_max_files: int = 200
+    download_inbox_move_files: bool = True
+    remote_browser_url: str | None = None
     database_url: str | None = None
 
     web_host: str = "0.0.0.0"
@@ -70,7 +77,13 @@ class Settings(BaseSettings):
     def normalize_log_level(cls, value: str) -> str:
         return value.upper()
 
-    @field_validator("musicbrainz_contact", "jellyfin_url", mode="before")
+    @field_validator(
+        "musicbrainz_contact",
+        "jellyfin_url",
+        "download_inbox_dir",
+        "remote_browser_url",
+        mode="before",
+    )
     @classmethod
     def empty_to_none(cls, value: object) -> object:
         if isinstance(value, str) and not value.strip():
@@ -114,7 +127,7 @@ class Settings(BaseSettings):
     def musicbrainz_user_agent(self) -> str | None:
         if not self.musicbrainz_contact:
             return None
-        return f"FoxDenMusic/0.2.0 ({self.musicbrainz_contact})"
+        return f"FoxDenMusic/2.2.5 ({self.musicbrainz_contact})"
 
     @property
     def jellyfin_configured(self) -> bool:

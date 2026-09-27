@@ -272,45 +272,46 @@ class MusicBrainzClient:
         # retain only the configured number of review candidates.
         search_limit = min(100, result_limit * 2)
 
-        query_parts = [f"release:{_lucene_phrase(hints.album)}"]
-        if hints.album_artist:
-            query_parts.append(f"artist:{_lucene_phrase(hints.album_artist)}")
-        search_payload = self._request_json(
-            "release/",
-            params={
-                "query": " AND ".join(query_parts),
-                "fmt": "json",
-                "limit": str(search_limit),
-            },
-            namespace="musicbrainz-search",
-        )
-
-        raw_releases = search_payload.get("releases")
-        if not isinstance(raw_releases, list):
-            return []
-
         matches: list[ReleaseMatch] = []
         seen_ids: set[str] = set()
-        for search_release in raw_releases:
-            if not isinstance(search_release, Mapping):
+        for query in _release_search_queries(hints):
+            search_payload = self._request_json(
+                "release/",
+                params={
+                    "query": query,
+                    "fmt": "json",
+                    "limit": str(search_limit),
+                },
+                namespace="musicbrainz-search",
+            )
+
+            raw_releases = search_payload.get("releases")
+            if not isinstance(raw_releases, list):
                 continue
-            raw_id = search_release.get("id")
-            if not isinstance(raw_id, str):
-                continue
-            try:
-                release_id = _canonical_mbid(raw_id)
-            except ValueError:
-                continue
-            if release_id in seen_ids:
-                continue
-            seen_ids.add(release_id)
-            try:
-                payload = self.lookup_release(release_id)
-            except MusicBrainzNotFoundError:
-                # Search indexes and entity lookups are not updated atomically.
-                continue
-            source_score = _as_float(search_release.get("score")) or 0.0
-            matches.append(_release_match(payload, hints, source_score))
+
+            for search_release in raw_releases:
+                if not isinstance(search_release, Mapping):
+                    continue
+                raw_id = search_release.get("id")
+                if not isinstance(raw_id, str):
+                    continue
+                try:
+                    release_id = _canonical_mbid(raw_id)
+                except ValueError:
+                    continue
+                if release_id in seen_ids:
+                    continue
+                seen_ids.add(release_id)
+                try:
+                    payload = self.lookup_release(release_id)
+                except MusicBrainzNotFoundError:
+                    # Search indexes and entity lookups are not updated atomically.
+                    continue
+                source_score = _as_float(search_release.get("score")) or 0.0
+                matches.append(_release_match(payload, hints, source_score))
+            matches.sort(key=lambda item: (item.score, item.source_score), reverse=True)
+            if len(matches) >= result_limit and matches[0].score >= self._settings.automatic_match_threshold:
+                break
 
         matches.sort(key=lambda item: (item.score, item.source_score), reverse=True)
         return matches[:result_limit]
@@ -439,6 +440,44 @@ def _lucene_phrase(value: str) -> str:
         for character in value.strip()
     )
     return f'"{escaped}"'
+
+
+def _release_search_queries(hints: AlbumHints) -> tuple[str, ...]:
+    """Return progressively broader MusicBrainz release searches.
+
+    Downloader-provided tags can be sparse or over-specific. Starting strict
+    keeps good tagged albums precise, while the broader fallbacks let local
+    track-count/title/duration scoring recover when the artist tag or album
+    wrapper text is wrong.
+    """
+
+    album = hints.album.strip()
+    queries: list[str] = []
+    strict_parts = [f"release:{_lucene_phrase(album)}"]
+    if hints.album_artist:
+        strict_parts.append(f"artist:{_lucene_phrase(hints.album_artist)}")
+    queries.append(" AND ".join(strict_parts))
+
+    if hints.album_artist:
+        queries.append(f"release:{_lucene_phrase(album)}")
+
+    track_titles = [
+        track.title.strip()
+        for track in hints.tracks
+        if isinstance(track.title, str) and track.title.strip()
+    ]
+    for title in track_titles[:3]:
+        queries.append(
+            f"release:{_lucene_phrase(album)} AND recording:{_lucene_phrase(title)}"
+        )
+
+    deduped: list[str] = []
+    seen: set[str] = set()
+    for query in queries:
+        if query not in seen:
+            deduped.append(query)
+            seen.add(query)
+    return tuple(deduped)
 
 
 def _request_cache_key(path: str, params: Mapping[str, str]) -> str:

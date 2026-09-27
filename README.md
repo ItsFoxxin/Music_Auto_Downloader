@@ -1,10 +1,3 @@
-# Music Auto Downloader`r`n`r`nVersion: `2.1.0`  `r`n
-Fox Den Music source arranged for this repository layout.
-
-- `backend/` contains the FastAPI app, worker, Dockerfile, tests, scripts, and docs.
-- `frontend/` mirrors the server-rendered templates and static assets for easier browsing/editing in GitHub. The backend still includes its own packaged copies so Docker builds work normally.
-- Copy `.env.example` to `.env` on your server and fill in local paths/API values. Do not commit `.env`.
-
 # Fox Den Music
 
 Fox Den Music is a self-hosted, security-focused music-management service for a
@@ -71,7 +64,7 @@ tagged working copy, and prepared album at the same time.
 For the current UGREEN NAS deployment, keep the host music binding set to:
 
 ```dotenv
-MUSIC_PATH=/path/to/your/music
+MUSIC_PATH=/mnt/@usb/sdc2/Media/Music
 ```
 
 Do not recursively change ownership of that existing collection without first
@@ -166,6 +159,8 @@ This rollback preserves both copies and deletes nothing.
    - set `PUID`, `PGID`, and the three host paths;
    - set `MUSICBRAINZ_CONTACT` to a real contact email or HTTPS URL;
    - optionally set `JELLYFIN_URL` and `JELLYFIN_API_KEY`;
+   - set `REMOTE_BROWSER_URL` to the externally reachable browser address;
+     keep `REMOTE_BROWSER_KIOSK=0` so downloader popups remain reachable as tabs;
    - keep `WEB_BIND_IP=127.0.0.1` behind a local reverse proxy, or set one
      specific LAN address for direct LAN access;
    - leave `SPOTIDOWNLOADER_URL` as the administrator-controlled public HTTPS
@@ -212,6 +207,10 @@ values. Never paste API keys into the web UI or commit the populated file.
 | `CONFIG_PATH` | `./data/config` | SQLite and generated state; local filesystem only |
 | `STAGING_PATH` | `./data/staging` | Uploads, acquisition roots, extraction, and working copies |
 | `MUSIC_PATH` | `./data/music` | Final Jellyfin music library; worker only |
+| `DOWNLOAD_INBOX_PATH` / `DOWNLOAD_INBOX_DIR` | `./data/download-inbox` / `/downloads` | Shared host folder and container path for completed browser downloads |
+| `REMOTE_BROWSER_URL` | blank | Externally reachable URL for the human-controlled server browser |
+| `REMOTE_BROWSER_BIND_IP` / `REMOTE_BROWSER_PORT` | `127.0.0.1` / `5800` | Published server-browser address |
+| `REMOTE_BROWSER_KIOSK` | `0` | Keep Firefox tabs visible for downloader popups; Compose forces popup windows into tabs, sets `SPOTIDOWNLOADER_URL` as the homepage, and disables session restoration |
 | `WEB_BIND_IP` / `WEB_PORT` | `127.0.0.1` / `8000` | The only published service port |
 | `WEB_MEMORY_LIMIT` / `WORKER_MEMORY_LIMIT` | `768m` / `1g` | Container memory backstops |
 | `CSRF_SECRET` | blank | Optional form-signing secret; blank persists a generated value under `/config` |
@@ -428,7 +427,7 @@ been made. Use media you own or are authorized to download.
    because every supported file is inspected and hashed.
 
 4. Confirm the resulting track/album/artist and codec totals correspond to the
-   actual collection mounted from `/path/to/your/music`. Open **Artists**,
+   actual collection mounted from `/mnt/@usb/sdc2/Media/Music`. Open **Artists**,
    an artist, an album, and several tracks. Spot-check tags, ordering, codec,
    sample rate/bit depth, size, and artwork status against real files.
 

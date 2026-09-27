@@ -553,6 +553,11 @@ def test_selected_edition_album_identity_comes_from_musicbrainz_candidate(
 ) -> None:
     job_id = "30000000-0000-0000-0000-000000000010"
     release_id = "22345678-1234-1234-1234-123456789abc"
+    first_working = settings.jobs_dir / job_id / "working" / "000001.flac"
+    second_working = settings.jobs_dir / job_id / "working" / "000002.flac"
+    first_working.parent.mkdir(parents=True)
+    first_working.write_bytes(b"tagged track one")
+    second_working.write_bytes(b"tagged track two")
     with database.session() as session:
         session.add(
             Job(
@@ -585,6 +590,10 @@ def test_selected_edition_album_identity_comes_from_musicbrainz_candidate(
         )
         first = _track(job_id, sha="1" * 64, title="Track One")
         second = _track(job_id, sha="2" * 64, title="Track Two")
+        first.working_relative_path = "working/000001.flac"
+        first.final_sha256 = sha256_file(first_working)
+        second.working_relative_path = "working/000002.flac"
+        second.final_sha256 = sha256_file(second_working)
         first.album_artist = "Wrong Artist"
         first.album = "Wrong Album"
         first.year = 1970

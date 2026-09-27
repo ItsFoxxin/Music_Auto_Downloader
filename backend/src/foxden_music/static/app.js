@@ -125,10 +125,10 @@
     });
   });
 
-  document.querySelectorAll("[data-copy-open-target]").forEach((link) => {
-    link.addEventListener("click", async (event) => {
+  document.querySelectorAll("[data-copy-open-form]").forEach((form) => {
+    form.addEventListener("submit", async (event) => {
       event.preventDefault();
-      const field = document.getElementById(link.dataset.copyOpenTarget);
+      const field = document.getElementById(form.dataset.copyTarget);
       if (!field) return;
       const copied = await copyField(field);
       if (!copied) {
@@ -139,7 +139,7 @@
         }
         return;
       }
-      window.location.assign(link.href);
+      form.submit();
     });
   });
 })();

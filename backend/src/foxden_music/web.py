@@ -1087,6 +1087,9 @@ def create_app(settings: Settings | None = None, database: Database | None = Non
                 effective_state=_effective_acquisition_state(acquisition),
                 provider_url=settings.spotidownloader_url,
                 remote_browser_url=settings.remote_browser_url,
+                automatic_inbox_enabled=bool(
+                    settings.download_inbox_auto_import and settings.download_inbox_dir
+                ),
                 timeline_events=_acquisition_timeline(acquisition),
                 max_upload_bytes=settings.max_upload_bytes,
             ),
@@ -1129,6 +1132,47 @@ def create_app(settings: Settings | None = None, database: Database | None = Non
             url=f"/acquisitions/{acquisition.id}",
             status_code=status.HTTP_303_SEE_OTHER,
         )
+
+    @app.post("/acquisitions/{acquisition_id}/begin-download")
+    def begin_acquisition_download(
+        request: Request,
+        acquisition_id: str,
+        csrf_token: str = Form(...),
+        session: Session = Depends(session_dependency),
+    ) -> RedirectResponse:
+        request.app.state.csrf.verify(csrf_token)
+        acquisition = load_acquisition(session, acquisition_id)
+        if not settings.download_inbox_auto_import or settings.download_inbox_dir is None:
+            raise HTTPException(status_code=409, detail="Automatic download inbox is not configured")
+        if acquisition.associated_import_job_id is not None:
+            raise HTTPException(status_code=409, detail="This acquisition already has an import")
+        if acquisition.state not in {
+            AcquisitionState.QUEUED.value,
+            AcquisitionState.WAITING_FOR_USER.value,
+            AcquisitionState.WAITING_FOR_DOWNLOAD.value,
+        }:
+            raise HTTPException(status_code=409, detail="This acquisition cannot start a download")
+        another_waiting = session.scalar(
+            select(AcquisitionJob.id).where(
+                AcquisitionJob.id != acquisition.id,
+                AcquisitionJob.state == AcquisitionState.WAITING_FOR_DOWNLOAD.value,
+                AcquisitionJob.associated_import_job_id.is_(None),
+            )
+        )
+        if another_waiting:
+            raise HTTPException(
+                status_code=409,
+                detail="Finish or cancel the current server download before starting another",
+            )
+        if acquisition.state != AcquisitionState.WAITING_FOR_DOWNLOAD.value:
+            transition_acquisition(
+                session,
+                acquisition,
+                AcquisitionState.WAITING_FOR_DOWNLOAD,
+                "Server browser opened; watching the download inbox",
+            )
+        destination = settings.remote_browser_url or settings.spotidownloader_url
+        return RedirectResponse(url=destination, status_code=status.HTTP_303_SEE_OTHER)
 
     @app.post("/acquisitions/{acquisition_id}/upload")
     async def acquisition_upload(

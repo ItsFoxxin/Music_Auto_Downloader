@@ -208,6 +208,7 @@ values. Never paste API keys into the web UI or commit the populated file.
 | `STAGING_PATH` | `./data/staging` | Uploads, acquisition roots, extraction, and working copies |
 | `MUSIC_PATH` | `./data/music` | Final Jellyfin music library; worker only |
 | `DOWNLOAD_INBOX_PATH` / `DOWNLOAD_INBOX_DIR` | `./data/download-inbox` / `/downloads` | Shared host folder and container path for completed browser downloads |
+| `DOWNLOAD_INBOX_AUTO_IMPORT` | `true` | Watch for the settled file created after a request starts downloading, attach it to that request, and queue its import automatically |
 | `REMOTE_BROWSER_URL` | blank | Externally reachable URL for the human-controlled server browser |
 | `REMOTE_BROWSER_BIND_IP` / `REMOTE_BROWSER_PORT` | `127.0.0.1` / `5800` | Published server-browser address |
 | `REMOTE_BROWSER_KIOSK` | `0` | Keep Firefox tabs visible for downloader popups; Compose forces popup windows into tabs, sets `SPOTIDOWNLOADER_URL` as the homepage, and disables session restoration |

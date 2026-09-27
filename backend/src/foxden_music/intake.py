@@ -37,6 +37,7 @@ class InboxFile:
     display_name: str
     byte_size: int
     age_seconds: float
+    modified_at_epoch: float
     ready: bool
     reason: str | None = None
 
@@ -127,6 +128,7 @@ def _inbox_file_state(
         display_name=display_name,
         byte_size=stat.st_size,
         age_seconds=age,
+        modified_at_epoch=stat.st_mtime,
         ready=ready,
         reason=reason,
     )

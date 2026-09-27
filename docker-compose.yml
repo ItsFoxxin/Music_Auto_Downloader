@@ -42,10 +42,11 @@ x-environment: &foxden-environment
   DOWNLOAD_INBOX_RECURSIVE: "${DOWNLOAD_INBOX_RECURSIVE:-true}"
   DOWNLOAD_INBOX_MAX_FILES: "${DOWNLOAD_INBOX_MAX_FILES:-200}"
   DOWNLOAD_INBOX_MOVE_FILES: "${DOWNLOAD_INBOX_MOVE_FILES:-true}"
+  DOWNLOAD_INBOX_AUTO_IMPORT: "${DOWNLOAD_INBOX_AUTO_IMPORT:-true}"
   REMOTE_BROWSER_URL: "${REMOTE_BROWSER_URL:-}"
 
 x-service: &foxden-service
-  image: fox-den-music:2.2.5
+  image: fox-den-music:2.3.0
   build: *foxden-build
   user: "${PUID:-10001}:${PGID:-10001}"
   init: true

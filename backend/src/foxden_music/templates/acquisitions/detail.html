@@ -10,13 +10,18 @@
   <div>
     <section class="panel provider-panel" aria-labelledby="provider-heading">
       <p class="eyebrow">Human-assisted download</p><h2 id="provider-heading">Get the requested file</h2>
-      <ol class="instruction-list"><li>Use the button below to copy the validated Spotify URL and open the server browser.</li><li>On a phone, open the server browser's left-side three-dot panel and paste into its clipboard box. Then paste into SpotiDownloader and complete any prompts or CAPTCHA yourself. Downloader popups open as visible tabs.</li><li>Save the ZIP or audio file to the browser's <code>/downloads</code> folder, then import it from the server inbox.</li></ol>
+      <ol class="instruction-list"><li>Use the button below to copy the validated Spotify URL and open the server browser.</li><li>On a phone, open the server browser's left-side three-dot panel and paste into its clipboard box. Then paste into SpotiDownloader and complete any prompts or CAPTCHA yourself. Downloader popups open as visible tabs.</li><li>Save the ZIP or audio file normally. Fox Den detects the completed server download, attaches it to this request, and starts the import automatically.</li></ol>
       <label for="source-url"><strong>Spotify URL</strong></label>
       <div class="copy-row"><input id="source-url" type="text" value="{{ acquisition.source_url }}" readonly><button class="button" type="button" data-copy-target="source-url">Copy URL</button></div>
       <p class="copy-feedback" data-copy-feedback role="status" aria-live="polite"></p>
-      {% if remote_browser_url %}
-      <a class="button primary" href="{{ remote_browser_url }}" rel="external" data-copy-open-target="source-url">Copy URL &amp; open downloader</a>
+      {% if remote_browser_url and automatic_inbox_enabled %}
+      <form action="/acquisitions/{{ acquisition.id }}/begin-download" method="post" data-copy-open-form data-copy-target="source-url">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <button class="button primary" type="submit">Copy URL &amp; start watched download</button>
+      </form>
       <p class="muted fine-print">The server browser opens directly on <code>{{ provider_url }}</code>. Its left-side three-dot panel contains the clipboard bridge for moving the copied URL into remote Firefox.</p>
+      {% elif remote_browser_url %}
+      <a class="button primary" href="{{ remote_browser_url }}" rel="external">Open downloader in server browser</a>
       {% else %}
       <a class="button primary" href="{{ provider_url }}" rel="external">Open SpotiDownloader</a>
       {% endif %}
@@ -45,7 +50,7 @@
     {% if not acquisition.associated_import_job_id and acquisition.state in ['QUEUED', 'WAITING_FOR_USER', 'WAITING_FOR_DOWNLOAD'] %}
     <form class="panel form-stack" action="/acquisitions/{{ acquisition.id }}/upload" method="post" enctype="multipart/form-data" data-upload-form data-max-upload-bytes="{{ max_upload_bytes }}">
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-      <div><p class="eyebrow">Handoff</p><h2>Upload download</h2><p class="muted">For an album, choose the downloaded ZIP. A loose audio file is treated as a one-track release.</p></div>
+      <div><p class="eyebrow">Fallback handoff</p><h2>Upload download manually</h2><p class="muted">Normally the server inbox detects the browser download automatically. Use this only for a file downloaded on another device. A loose audio file is treated as a one-track release.</p></div>
       <label for="acquisition-file"><strong>Album ZIP or one audio file</strong><span>Maximum {{ max_upload_bytes|filesize }}</span></label>
       <input id="acquisition-file" type="file" name="album" accept=".zip,.flac,.mp3,.m4a,.aac,.opus,.ogg,.oga" required data-upload-file>
       <p class="upload-selection" data-upload-selection aria-live="polite">No file selected.</p>

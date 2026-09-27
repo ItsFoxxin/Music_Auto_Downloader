@@ -13,6 +13,7 @@ from .config import get_settings
 from .database import Database
 from .enums import JellyfinState, JobState
 from .healthcheck import write_worker_heartbeat
+from .inbox_automation import stage_next_waiting_download
 from .inventory import (
     claim_next_scan,
     ensure_initial_or_scheduled_scan,
@@ -81,6 +82,15 @@ def worker_loop(*, once: bool = False) -> int:
     logger.info("Worker started")
     try:
         while not stop_event.is_set():
+            try:
+                inbox_job_id = stage_next_waiting_download(database, settings)
+                if inbox_job_id:
+                    logger.info(
+                        "Automatically staged a completed server download",
+                        extra={"job_id": inbox_job_id},
+                    )
+            except Exception:
+                logger.exception("Automatic server-download handoff failed")
             job_id: str | None
             with database.session() as session:
                 job_id = claim_next_job(session)

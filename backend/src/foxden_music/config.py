@@ -28,6 +28,7 @@ class Settings(BaseSettings):
     download_inbox_recursive: bool = True
     download_inbox_max_files: int = 200
     download_inbox_move_files: bool = True
+    download_inbox_auto_import: bool = True
     remote_browser_url: str | None = None
     database_url: str | None = None
 
@@ -127,7 +128,7 @@ class Settings(BaseSettings):
     def musicbrainz_user_agent(self) -> str | None:
         if not self.musicbrainz_contact:
             return None
-        return f"FoxDenMusic/2.2.5 ({self.musicbrainz_contact})"
+        return f"FoxDenMusic/2.3.0 ({self.musicbrainz_contact})"
 
     @property
     def jellyfin_configured(self) -> bool:

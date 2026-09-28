@@ -1081,6 +1081,7 @@ def create_app(settings: Settings | None = None, database: Database | None = Non
         return templates.TemplateResponse(
             request=request,
             name="acquisitions/detail.html",
+            headers={"Cache-Control": "no-store"},
             context=common_context(
                 request,
                 acquisition=acquisition,
@@ -1133,6 +1134,24 @@ def create_app(settings: Settings | None = None, database: Database | None = Non
             status_code=status.HTTP_303_SEE_OTHER,
         )
 
+    @app.get("/acquisitions/{acquisition_id}/browser", response_class=HTMLResponse)
+    def acquisition_browser(
+        request: Request,
+        acquisition_id: str,
+        session: Session = Depends(session_dependency),
+    ) -> HTMLResponse:
+        acquisition = load_acquisition(session, acquisition_id)
+        if not settings.remote_browser_url:
+            raise HTTPException(status_code=409, detail="Server browser is not configured")
+        return templates.TemplateResponse(
+            request=request,
+            name="acquisitions/browser.html",
+            headers={"Cache-Control": "no-store"},
+            context=common_context(
+                request, acquisition=acquisition, browser_url="/server-browser/",
+            ),
+        )
+
     @app.post("/acquisitions/{acquisition_id}/begin-download")
     def begin_acquisition_download(
         request: Request,
@@ -1171,7 +1190,7 @@ def create_app(settings: Settings | None = None, database: Database | None = Non
                 AcquisitionState.WAITING_FOR_DOWNLOAD,
                 "Server browser handoff started; watching the download inbox",
             )
-        destination = settings.remote_browser_url or settings.spotidownloader_url
+        destination = f"/acquisitions/{acquisition.id}/browser"
         # Return an actual same-origin document before navigating away. This
         # works even when a client has an older cached app.js and avoids Firefox
         # treating an external redirect as a blocked cross-origin form action.

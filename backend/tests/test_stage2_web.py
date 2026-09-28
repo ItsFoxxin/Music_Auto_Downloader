@@ -200,7 +200,7 @@ def test_acquisition_upload_links_the_stage1_import_and_reuses_intake(settings, 
 def test_acquisition_detail_starts_watched_server_download(
     settings, database, tmp_path
 ) -> None:
-    settings.remote_browser_url = "http://10.0.30.20:5800"
+    settings.remote_browser_url = "/server-browser/"
     settings.download_inbox_dir = tmp_path / "downloads"
     settings.download_inbox_dir.mkdir()
     app = create_app(settings, database)
@@ -221,7 +221,7 @@ def test_acquisition_detail_starts_watched_server_download(
         assert f'action="/acquisitions/{acquisition_id}/begin-download"' in detail.text
         assert "Copy URL &amp; start watched download" in detail.text
         assert "data-copy-open-form" in detail.text
-        assert 'data-browser-url="http://10.0.30.20:5800"' in detail.text
+        assert f'data-browser-url="/acquisitions/{acquisition_id}/browser"' in detail.text
         assert 'target="_blank"' not in detail.text
         assert "Open SpotiDownloader" not in detail.text
 
@@ -235,12 +235,36 @@ def test_acquisition_detail_starts_watched_server_download(
         assert started.status_code == 200
         assert started.headers["cache-control"] == "no-store"
         assert 'http-equiv="refresh"' in started.text
-        assert 'content="0;url=http://10.0.30.20:5800"' in started.text
-        assert 'href="http://10.0.30.20:5800"' in started.text
+        assert f'content="0;url=/acquisitions/{acquisition_id}/browser"' in started.text
+        browser = client.get(f"/acquisitions/{acquisition_id}/browser")
+        assert browser.status_code == 200
+        assert 'src="/server-browser/"' in browser.text
+        assert f'href="/acquisitions/{acquisition_id}?from=browser"' in browser.text
+        assert "Back to request" in browser.text
+        assert "Refresh browser view" in browser.text
+        assert browser.headers["cache-control"] == "no-store"
+        assert "default-src 'self'" in browser.headers["content-security-policy"]
+        returned = client.get(f"/acquisitions/{acquisition_id}?from=browser")
+        assert returned.status_code == 200
+        assert returned.headers["cache-control"] == "no-store"
+        assert "WAITING FOR DOWNLOAD" in returned.text
     with database.session() as session:
         acquisition = session.get(AcquisitionJob, acquisition_id)
         assert acquisition is not None
         assert acquisition.state == AcquisitionState.WAITING_FOR_DOWNLOAD.value
+
+
+def test_browser_view_requires_existing_request_and_configuration(settings, database):
+    app = create_app(settings, database)
+    with TestClient(app) as client:
+        assert client.get("/acquisitions/missing/browser").status_code == 404
+        token = _csrf(client.get("/add").text)
+        client.post("/acquisitions", data={
+            "csrf_token": token, "preferred_format": "FLAC", "source_urls": ALBUM_URL,
+        })
+        with database.session() as session:
+            acquisition_id = session.scalar(select(AcquisitionJob.id))
+        assert client.get(f"/acquisitions/{acquisition_id}/browser").status_code == 409
 
 
 def test_waiting_acquisition_can_be_cancelled_safely_and_idempotently(

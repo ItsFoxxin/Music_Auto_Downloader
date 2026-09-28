@@ -15,7 +15,7 @@
       <div class="copy-row"><input id="source-url" type="text" value="{{ acquisition.source_url }}" readonly><button class="button" type="button" data-copy-target="source-url">Copy URL</button></div>
       <p class="copy-feedback" data-copy-feedback role="status" aria-live="polite"></p>
       {% if remote_browser_url and automatic_inbox_enabled %}
-      <form action="/acquisitions/{{ acquisition.id }}/begin-download" method="post" data-copy-open-form data-copy-target="source-url" data-browser-url="{{ remote_browser_url }}">
+      <form action="/acquisitions/{{ acquisition.id }}/begin-download" method="post" data-copy-open-form data-copy-target="source-url" data-browser-url="/acquisitions/{{ acquisition.id }}/browser">
         <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
         <button class="button primary" type="submit" data-copy-open-submit>Copy URL &amp; start watched download</button>
       </form>

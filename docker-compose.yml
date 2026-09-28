@@ -43,10 +43,11 @@ x-environment: &foxden-environment
   DOWNLOAD_INBOX_MAX_FILES: "${DOWNLOAD_INBOX_MAX_FILES:-200}"
   DOWNLOAD_INBOX_MOVE_FILES: "${DOWNLOAD_INBOX_MOVE_FILES:-true}"
   DOWNLOAD_INBOX_AUTO_IMPORT: "${DOWNLOAD_INBOX_AUTO_IMPORT:-true}"
-  REMOTE_BROWSER_URL: "${REMOTE_BROWSER_URL:-}"
+  # The browser shares the application's address through the gateway.
+  REMOTE_BROWSER_URL: /server-browser/
 
 x-service: &foxden-service
-  image: fox-den-music:2.3.2
+  image: fox-den-music:2.3.3
   build: *foxden-build
   user: "${PUID:-10001}:${PGID:-10001}"
   init: true
@@ -60,6 +61,23 @@ x-service: &foxden-service
     - /tmp:rw,noexec,nosuid,nodev,size=256m,mode=1777
 
 services:
+  gateway:
+    image: nginx:stable-alpine
+    user: "101:101"
+    entrypoint: ["nginx", "-g", "daemon off;"]
+    restart: unless-stopped
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,nodev,size=64m,mode=1777
+    ports:
+      - "${WEB_BIND_IP:-127.0.0.1}:${WEB_PORT:-8000}:8080"
+    volumes:
+      - ./gateway/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - web
+      - download-browser
   web:
     <<: *foxden-service
     mem_limit: "${WEB_MEMORY_LIMIT:-768m}"
@@ -85,8 +103,8 @@ services:
         uid: "${PUID:-10001}"
         gid: "${PGID:-10001}"
         mode: 0440
-    ports:
-      - "${WEB_BIND_IP:-127.0.0.1}:${WEB_PORT:-8000}:8000"
+    expose:
+      - "8000"
     volumes:
       - type: bind
         source: "${CONFIG_PATH:-./data/config}"
@@ -182,6 +200,9 @@ services:
       FF_PREF_NEW_WINDOWS_AS_TABS: "browser.link.open_newwindow=3"
       FF_PREF_SCRIPT_WINDOWS_AS_TABS: "browser.link.open_newwindow.restriction=0"
       FF_PREF_EXTERNAL_LINKS_AS_TABS: "browser.link.open_newwindow.override.external=3"
+      FF_PREF_DOWNLOAD_DIR: 'browser.download.dir="/downloads"'
+      FF_PREF_DOWNLOAD_FOLDER: "browser.download.folderList=2"
+      FF_PREF_USE_DOWNLOAD_DIR: "browser.download.useDownloadDir=true"
     ports:
       - "${REMOTE_BROWSER_BIND_IP:-127.0.0.1}:${REMOTE_BROWSER_PORT:-5800}:5800"
     volumes:

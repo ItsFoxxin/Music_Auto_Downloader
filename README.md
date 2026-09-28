@@ -159,7 +159,8 @@ This rollback preserves both copies and deletes nothing.
    - set `PUID`, `PGID`, and the three host paths;
    - set `MUSICBRAINZ_CONTACT` to a real contact email or HTTPS URL;
    - optionally set `JELLYFIN_URL` and `JELLYFIN_API_KEY`;
-   - set `REMOTE_BROWSER_URL` to the externally reachable browser address;
+   - the browser now uses `/server-browser/` on the same server IP and web port;
+     Compose supplies this automatically, including when `.env` contains an old IP;
      keep `REMOTE_BROWSER_KIOSK=0` so downloader popups remain reachable as tabs;
    - keep `WEB_BIND_IP=127.0.0.1` behind a local reverse proxy, or set one
      specific LAN address for direct LAN access;
@@ -209,7 +210,7 @@ values. Never paste API keys into the web UI or commit the populated file.
 | `MUSIC_PATH` | `./data/music` | Final Jellyfin music library; worker only |
 | `DOWNLOAD_INBOX_PATH` / `DOWNLOAD_INBOX_DIR` | `./data/download-inbox` / `/downloads` | Shared host folder and container path for completed browser downloads |
 | `DOWNLOAD_INBOX_AUTO_IMPORT` | `true` | Watch for the settled file created after a request starts downloading, attach it to that request, and queue its import automatically |
-| `REMOTE_BROWSER_URL` | blank | Externally reachable URL for the human-controlled server browser |
+| `REMOTE_BROWSER_URL` | `/server-browser/` in Compose | Browser path through the gateway; old `.env` addresses are ignored by Compose |
 | `REMOTE_BROWSER_BIND_IP` / `REMOTE_BROWSER_PORT` | `127.0.0.1` / `5800` | Published server-browser address |
 | `REMOTE_BROWSER_KIOSK` | `0` | Keep Firefox tabs visible for downloader popups; Compose forces popup windows into tabs, sets `SPOTIDOWNLOADER_URL` as the homepage, and disables session restoration |
 | `WEB_BIND_IP` / `WEB_PORT` | `127.0.0.1` / `8000` | The only published service port |

@@ -241,7 +241,8 @@ def test_acquisition_detail_starts_watched_server_download(
         assert 'src="/server-browser/"' in browser.text
         assert f'href="/acquisitions/{acquisition_id}?from=browser"' in browser.text
         assert "Back to request" in browser.text
-        assert "Refresh browser view" in browser.text
+        assert "Downloader home" in browser.text
+        assert f'data-home-url="{settings.spotidownloader_url}"' in browser.text
         assert browser.headers["cache-control"] == "no-store"
         assert "default-src 'self'" in browser.headers["content-security-policy"]
         returned = client.get(f"/acquisitions/{acquisition_id}?from=browser")

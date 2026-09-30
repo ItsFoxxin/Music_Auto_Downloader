@@ -1149,6 +1149,7 @@ def create_app(settings: Settings | None = None, database: Database | None = Non
             headers={"Cache-Control": "no-store"},
             context=common_context(
                 request, acquisition=acquisition, browser_url="/server-browser/",
+                provider_url=settings.spotidownloader_url,
             ),
         )
 

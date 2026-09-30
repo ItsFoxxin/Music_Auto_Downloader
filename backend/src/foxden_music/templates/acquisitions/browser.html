@@ -12,15 +12,16 @@
 <body class="browser-view">
   <header class="browser-toolbar">
     <a class="button primary" href="/acquisitions/{{ acquisition.id }}?from=browser">Back to request</a>
-    <button class="button" type="button" data-refresh-browser>Refresh browser view</button>
+    <button class="button" type="button" data-browser-home data-bridge-url="{{ url_for('static', path='/browser-home-bridge.js') }}?v={{ version }}" disabled>Downloader home</button>
     <button class="button" type="button" data-copy-target="browser-source-url">Copy link</button>
     <input id="browser-source-url" type="text" value="{{ acquisition.source_url }}" readonly aria-label="Spotify link">
     <span data-copy-feedback role="status" aria-live="polite"></span>
   </header>
   <div class="browser-help">
+    <span data-browser-feedback role="status" aria-live="polite"></span>
     Leaving this view keeps downloads running. Back to request shows the latest import status.
     <a href="{{ browser_url }}" target="_blank" rel="noopener noreferrer">Open separately if the view is blank</a>
   </div>
-  <iframe class="browser-frame" src="{{ browser_url }}" title="Server download browser" referrerpolicy="no-referrer" allow="fullscreen; clipboard-read; clipboard-write" allowfullscreen></iframe>
+  <iframe class="browser-frame" src="{{ browser_url }}" data-home-url="{{ provider_url }}" title="Server download browser" referrerpolicy="no-referrer" allow="fullscreen; clipboard-read; clipboard-write" allowfullscreen></iframe>
 </body>
 </html>

@@ -3,19 +3,28 @@
 {% block content %}
 <section class="hero compact">
   <div>
-    <p class="eyebrow">The den at a glance</p>
-    <h1>Your music library, live.</h1>
-    <p>Queue acquisitions, follow imports, and spot library issues without leaving the dashboard.</p>
+    <p class="eyebrow">A home for your collection</p>
+    <h1>From download <br>to your next listen<span class="accent">.</span></h1>
+    <p>Everything on its way to your music library, in one quiet corner.</p>
   </div>
   <div class="mini-metrics">
     <form action="/library/scans" method="post"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button class="button" type="submit">Refresh library</button></form>
-    <a class="button primary" href="/add">Add music</a>
+    <a class="button primary" href="/add">+ Add music</a>
   </div>
 </section>
 
 <div data-poll-url="/partials/dashboard/metrics" data-poll-ms="30000">
   {% include "partials/dashboard_metrics.html" %}
 </div>
+
+<section class="workflow" aria-label="How music reaches your library">
+  <div class="workflow-intro"><p class="eyebrow">The journey home</p><h2>Good tracks. Peace of mind.</h2></div>
+  <div class="workflow-step"><span>01</span><div><strong>Download</strong><small>Queue a link or upload your files</small></div></div>
+  <span class="workflow-arrow" aria-hidden="true">→</span>
+  <div class="workflow-step"><span>02</span><div><strong>Check & tag</strong><small>Validate audio and review metadata</small></div></div>
+  <span class="workflow-arrow" aria-hidden="true">→</span>
+  <div class="workflow-step"><span>03</span><div><strong>Bring it home</strong><small>Import safely into your library</small></div></div>
+</section>
 
 <div class="dashboard-columns">
   <section class="panel" aria-labelledby="active-heading">

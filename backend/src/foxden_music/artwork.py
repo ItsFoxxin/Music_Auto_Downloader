@@ -154,7 +154,7 @@ class ArtworkService:
                     headers={
                         "Accept": "image/jpeg,image/png,image/webp,image/*;q=0.8",
                         "User-Agent": self._settings.musicbrainz_user_agent
-                        or "FoxDenMusic/2.3.4",
+                        or "FoxDenMusic/2.4.0",
                     },
                     timeout=self._settings.metadata_http_timeout_seconds,
                     follow_redirects=True,

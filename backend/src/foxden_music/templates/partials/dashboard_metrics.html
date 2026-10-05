@@ -1,10 +1,10 @@
 <section class="metric-section" aria-labelledby="library-metrics-heading">
   <div class="section-label"><h2 id="library-metrics-heading">Library</h2>{% if latest_scan %}<span>Last scan {{ latest_scan.finished_at|datetime if latest_scan.finished_at else latest_scan.state|replace('_', ' ') }}</span>{% else %}<span>Not scanned yet</span>{% endif %}</div>
   <div class="stat-grid stat-grid-four">
-    <a class="stat-card green" href="/library"><span>Tracks</span><strong>{{ library_metrics.tracks }}</strong></a>
-    <a class="stat-card" href="/library/albums"><span>Albums</span><strong>{{ library_metrics.albums }}</strong></a>
-    <a class="stat-card" href="/library/artists"><span>Artists</span><strong>{{ library_metrics.artists }}</strong></a>
-    <div class="stat-card"><span>Library size</span><strong class="metric-text">{{ library_metrics.bytes|filesize }}</strong></div>
+    <a class="stat-card green" href="/library"><div class="stat-label"><span>Tracks</span><span class="stat-icon mint" aria-hidden="true">♫</span></div><strong>{{ library_metrics.tracks }}</strong><small>In your music library</small></a>
+    <a class="stat-card" href="/library/albums"><div class="stat-label"><span>Albums</span><span class="stat-icon peach" aria-hidden="true">▤</span></div><strong>{{ library_metrics.albums }}</strong><small>Collections to come home to</small></a>
+    <a class="stat-card" href="/library/artists"><div class="stat-label"><span>Artists</span><span class="stat-icon violet" aria-hidden="true">♧</span></div><strong>{{ library_metrics.artists }}</strong><small>The voices behind your music</small></a>
+    <div class="stat-card"><div class="stat-label"><span>Library size</span><span class="stat-icon" aria-hidden="true">◴</span></div><strong class="metric-text">{{ library_metrics.bytes|filesize }}</strong><small>Music observed in the last scan</small></div>
   </div>
 </section>
 

@@ -1,5 +1,16 @@
 # Fox Den Music
 
+## v2.4.0 · A shared Fox Den workspace
+
+The music UI now matches the layout and visual language of
+[Fox Den Media on dev](https://github.com/ItsFoxxin/Media_Downloader/tree/230dd7c):
+a desktop sidebar, touch-friendly mobile navigation, charcoal panels, peach
+actions, and a green download-to-library workflow. Upload, tagging, queue,
+library scanning, and remote-browser behavior are unchanged. No new accounts,
+API keys, or environment variables are required.
+
+See [release notes, deployment, and manual checks](docs/ui-v2.4.0.md).
+
 Fox Den Music is a self-hosted, security-focused music-management service for a
 Jellyfin library. Stage 2 adds a live dashboard, a read-only index of the real
 music collection, artist/album/health views, a persistent Spotify acquisition
